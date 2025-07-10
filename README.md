@@ -118,18 +118,35 @@ Output guardrail endpoint for validating and potentially transforming OpenAI cha
 - `ChatCompletion` - Content was transformed, returns the modified response
 - `HTTP 400/500` - Guardrails failed with error details
 
+## Models
+
+### InputRequest
+- **Attributes**:
+  - `requestBody`: The request body to the guardrail server.
+  - `config`: The configuration for the guardrail server.
+  - `context`: The context for the guardrail server.
+
+### OutputRequest
+- **Attributes**:
+  - `requestBody`: The request body to the guardrail server.
+  - `responseBody`: The response body from the guardrail server.
+  - `config`: The configuration for the guardrail server.
+  - `context`: The context for the guardrail server.
+
+### InputGuardrailResponse
+- **Attributes**:
+  - `result`: The result of the guardrail.
+  - `transformed`: Whether the result was transformed.
+  - `message`: The message from the guardrail.
+
+### RequestContext
+- **Attributes**:
+  - `user`: The user associated with the request context.
+  - `metadata`: Arbitrary metadata for the request context.
+
 ## Configuration Options
 
-The `config` parameter supports various options to control guardrail behavior:
-
-### Input Guardrails
-- `check_content`: Boolean - Check for prohibited content
-- `transform_input`: Boolean - Apply input transformations
-
-### Output Guardrails
-- `check_sensitive_data`: Boolean - Check for sensitive information
-- `transform_output`: Boolean - Apply output transformations
-- `filter_by_context`: Boolean - Filter content based on user context
+The `RequestConfig` class is used to store arbitrary request configuration. Ensure that all configuration options are clearly defined and documented in the relevant sections above.
 
 ## Example Usage
 
@@ -202,9 +219,26 @@ curl -X POST "http://localhost:8000/output" \
      }'
 ```
 
+### Input Guardrail with PII Removal
+The input guardrail endpoint now uses Presidio to detect and remove Personally Identifiable Information (PII) from incoming messages. This ensures that sensitive information is anonymized before further processing.
+
+**Example Usage with PII Removal**
+```bash
+curl -X POST "http://localhost:8000/input" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "requestBody": {
+         "messages": [
+           {"role": "user", "content": "My name is John Doe and my email is john.doe@example.com"}
+         ],
+         "model": "gpt-3.5-turbo"
+       },
+       "config": {"check_content": true},
+       "context": {"user_id": "123"}
+     }'
+```
+In this example, Presidio will detect and anonymize the name and email address in the message content.
+
 ## Customization
 
-Replace the example guardrail logic in `main.py` with your actual implementation:
-- Add your content validation rules
-- Implement your transformation logic
-- Configure appropriate error handling 
+Replace the example guardrail logic in `

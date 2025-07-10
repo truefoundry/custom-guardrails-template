@@ -14,13 +14,9 @@ class RequestContext(dict):
     """
 
     @property
-    def user(self) -> Optional[Subject]:
+    def user(self) -> Subject:
         return self.get("user")
-
-    @user.setter
-    def user(self, value: Subject) -> None:
-        self["user"] = value
-
+    
     @property
     def metadata(self) -> Optional[Metadata]:
         return self.get("metadata")
