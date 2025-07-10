@@ -32,7 +32,7 @@ async def root():
 
 
 @app.post("/input", response_model=Optional[InputGuardrailResponse])
-async def input_guardrail(request: InputRequest, headers: dict = Depends(lambda: dict(request.headers))):
+async def input_guardrail(request: InputRequest):
     """
     Input guardrail endpoint to process incoming requests.
     
