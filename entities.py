@@ -40,8 +40,8 @@ class OutputRequest(BaseModel):
         config (RequestConfig): The configuration for the guardrail server.
         context (RequestContext): The context for the guardrail server.
     """
-    requestBody: CompletionCreateParams
-    responseBody: ChatCompletion
+    requestBody: dict
+    responseBody: dict
     config: Optional[dict] = None
     context: RequestContext
 
@@ -55,7 +55,7 @@ class InputRequest(BaseModel):
         config (RequestConfig): The configuration for the guardrail server.
         context (RequestContext): The context for the guardrail server.
     """
-    requestBody: CompletionCreateParams
+    requestBody: dict
     context: RequestContext
     config: Optional[dict] = None
 

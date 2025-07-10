@@ -42,7 +42,7 @@ async def root():
     return {"message": "Guardrail Server is running", "version": "1.0.0"}
 
 
-@app.post("/input", response_model=Optional[CompletionCreateParams])
+@app.post("/input", response_model=Optional[dict])
 async def input_guardrail(request: InputRequest):
     """
     Input guardrail endpoint for validating and optionally transforming incoming OpenAI chat completion requests.
@@ -113,7 +113,7 @@ async def input_guardrail(request: InputRequest):
         raise HTTPException(status_code=500, detail=f"Guardrail processing failed: {str(e)}")
 
 
-@app.post("/output", response_model=Optional[ChatCompletion])
+@app.post("/output", response_model=Optional[dict])
 async def output_guardrail(
     request: OutputRequest,
     raw_request: Request  # FastAPI's Request object to access headers
@@ -126,7 +126,7 @@ async def output_guardrail(
         raw_request (Request): The raw HTTP request object to access headers.
 
     Returns:
-        Optional[ChatCompletion]: Transformed responseBody if content was modified, otherwise None.
+        Optional[dict]: Transformed responseBody if content was modified, otherwise None.
 
     Raises:
         HTTPException: If guardrails fail (e.g., missing/invalid headers or internal error).
@@ -163,11 +163,11 @@ async def output_guardrail(
 
         # Transform response content if transformation is enabled
         if config.get("transform_output", False):
-            transformed_body = response_body.model_copy(deep=True)
-            for choice in transformed_body.choices:
-                if choice.message.content:
+            transformed_body = response_body.copy()  # Use dict copy method
+            for choice in transformed_body.get("choices", []):
+                if "content" in choice.get("message", {}):
                     # Add a prefix to indicate the response was processed
-                    choice.message.content = f"[Processed] {choice.message.content}"
+                    choice["message"]["content"] = f"[Processed] {choice["message"]["content"]}"
             return transformed_body
 
         logger.info("Output guardrail passed without transformation")
