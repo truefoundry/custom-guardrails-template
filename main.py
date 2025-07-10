@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, Request
 from typing import Optional, Annotated
 import logging
+import copy
 
 from openai.types.chat.chat_completion import ChatCompletion
 from presidio_analyzer import AnalyzerEngine
@@ -64,14 +65,31 @@ async def input_guardrail(request: InputRequest):
         
         # Use Presidio to remove PII if transformation is enabled
         if config.get("transform_input", False):
-            transformed_body = request_body.model_copy(deep=True)
-            for message in transformed_body.get("messages", []):
+            transformed = False
+
+            messages = request_body.get("messages", [])
+            transformed_messages = []
+            # Ensure request_body is a dictionary
+            for message in messages:
+                logger.info(f"Message: {message}")
                 if isinstance(message, dict) and message.get("content"):
                     # Analyze and anonymize PII
                     results = analyzer.analyze(text=message["content"], entities=[], language='en')
                     anonymized_content = anonymizer.anonymize(text=message["content"], analyzer_results=results)
-                    message["content"] = anonymized_content.text
-            return transformed_body
+                    if anonymized_content.text != message["content"]:
+                        transformed = True
+                    transformed_messages.append({
+                        "role": message["role"],
+                        "content": anonymized_content.text
+                    })
+
+
+            request_body["messages"] = transformed_messages
+            
+            if transformed:
+                return InputGuardrailResponse(result=request_body, transformed=transformed, message="Success")
+            else:
+                return None
         
         # Log success if no transformation is needed
         logger.info("Input guardrail passed without transformation")

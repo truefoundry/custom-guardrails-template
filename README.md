@@ -22,11 +22,6 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 The server will start on `http://localhost:8000`
 
-## API Documentation
-
-Once the server is running, you can access:
-- Interactive API docs: `http://localhost:8000/docs`
-- ReDoc documentation: `http://localhost:8000/redoc`
 
 ## Endpoints
 
@@ -36,16 +31,6 @@ Health check endpoint that returns server status.
 ### POST /input
 Input guardrail endpoint for validating and potentially transforming incoming OpenAI chat completion requests.
 
-
-## Models
-- [InputRequest](models/input_request.py) - The input request to the guardrail server in case of guardrail before input to model.
-- [OutputRequest](models/output_request.py) - The output request to the guardrail server in case of guardrail after output from model.
-- [RequestContext](models/request_context.py) - The contextual information like user, metadata, etc sent to the guardrail server.
-- [InputGuardrailResponse](models/input_guardrail_response.py) - The response from the guardrail server in case of guardrail before input to model.
-- [OutputGuardrailResponse](models/output_guardrail_response.py) - The response from the guardrail server in case of guardrail after output from model.
-- [RequestConfig](models/request_config.py) - The configuration for the guardrail server.
-- [Metadata](models/metadata.py) - The metadata which is sent with the request to the ai-gateway so it can be used at guardrail server if needed.
-- [Subject](models/subject.py) - This class is for user/team/virtual-account information.
 
 
 **Request Body:**
@@ -82,10 +67,10 @@ Input guardrail endpoint for validating and potentially transforming incoming Op
 
 **Note**: The `requestBody` is accessible within the endpoint and can be used if needed for custom processing.
 
-**Response:**
-- `null` - Guardrails passed, no transformation needed
+#### What does guardrail server respond with?
+- `null` - Guardrails passed, no transformation needed for input.
 - `ChatCompletionCreateParams` - Content was transformed, returns the modified request
-- `HTTP 400/500` - Guardrails failed with error details
+- `HTTP 400/500` - Guardrails failed with error details for input.
 
 ### POST /output
 Output guardrail endpoint for validating and potentially transforming OpenAI chat completion responses.
@@ -143,38 +128,52 @@ Output guardrail endpoint for validating and potentially transforming OpenAI cha
 }
 ```
 
-**Response:**
-- `null` - Guardrails passed, no transformation needed
-- `ChatCompletion` - Content was transformed, returns the modified response
-- `HTTP 400/500` - Guardrails failed with error details
+#### What does guardrail server respond with?
+- `null` - Guardrails passed, no transformation needed for output.
+- `ChatCompletion` - Content was transformed, returns the modified response for output.
+- `HTTP 400/500` - Guardrails failed with error details for output.
+
 
 ## Models
+- [InputRequest](models/input_request.py) - The input request to the guardrail server in case of guardrail before input to model.
+- [OutputRequest](models/output_request.py) - The output request to the guardrail server in case of guardrail after output from model.
+- [RequestContext](models/request_context.py) - The contextual information like user, metadata, etc sent to the guardrail server.
+- [RequestConfig](models/request_config.py) - The configuration for the guardrail server.
+- [InputGuardrailResponse](models/input_guardrail_response.py) - The response from the guardrail server in case of guardrail before input to model.
+- [OutputGuardrailResponse](models/output_guardrail_response.py) - The response from the guardrail server in case of guardrail after output from model.
+- [RequestConfig](models/request_config.py) - The configuration for the guardrail server.
+- [Metadata](models/metadata.py) - The metadata which is sent with the request to the ai-gateway so it can be used at guardrail server if needed.
+- [Subject](models/subject.py) - This class is for user/team/virtual-account information.
 
 ### InputRequest
-- **Attributes**:
-  - `requestBody`: The request body to the guardrail server.
-  - `config`: The configuration for the guardrail server.
-  - `context`: The context for the guardrail server.
+
+**Attributes:**
+- `requestBody`: (dict) The input payload sent to the guardrail server.
+- `config`: (RequestConfig) Configuration options for the guardrail server.
+- `context`: (RequestContext) Contextual information such as user and metadata.
 
 ### OutputRequest
-- **Attributes**:
-  - `requestBody`: The request body to the guardrail server.
-  - `responseBody`: The response body from the guardrail server.
-  - `config`: The configuration for the guardrail server.
-  - `context`: The context for the guardrail server.
+
+**Attributes:**
+- `requestBody`: (dict) The input payload originally sent to the model.
+- `responseBody`: (dict) The model's output to be checked by the guardrail server.
+- `config`: (RequestConfig) Configuration options for the guardrail server.
+- `context`: (RequestContext) Contextual information such as user and metadata.
 
 ### InputGuardrailResponse
-- **Attributes**:
-  - `result`: The result of the guardrail.
-  - `transformed`: Whether the result was transformed.
-  - `message`: The message from the guardrail.
+
+**Attributes:**
+- `result`: (dict) The processed or validated input, possibly transformed.
+- `transformed`: (bool) Indicates if the input was modified by the guardrail.
+- `message`: (str) Additional information or explanation from the guardrail.
 
 ### RequestContext
-- **Attributes**:
-  - `user`: The user associated with the request context.
-  - `metadata`: Arbitrary metadata for the request context.
 
-## Configuration Options
+**Attributes:**
+- `user`: (Subject) Information about the user, team, or virtual account making the request.
+- `metadata`: (Metadata) Additional metadata relevant to the request.
+
+## Request Config
 
 The `RequestConfig` class is used to store arbitrary request configuration. Ensure that all configuration options are clearly defined and documented in the relevant sections above.
 
@@ -214,7 +213,7 @@ curl -X POST "http://localhost:8000/input" \
      -d '{
        "requestBody": {
          "messages": [
-           {"role": "user", "content": "Hello world"}
+           {"role": "user", "content": "Hello John, How are you?"}
          ],
          "model": "gpt-3.5-turbo"
        },
@@ -280,34 +279,19 @@ The input guardrail endpoint uses Presidio to detect and remove Personally Ident
 
 **Example Usage with PII Removal**
 ```bash
-curl -X POST "http://localhost:8000/input" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "My name is John Doe and my email is john.doe@example.com"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "config": {
-      "check_content": true,
-      "transform_input": true
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "environment": "production"
-      }
-    }
-  }'
+
+  curl -X POST "http://localhost:8000/input" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "requestBody": {
+         "messages": [
+           {"role": "user", "content": "Hello John, How are you? Is this your email address? john@gmail.com"}
+         ],
+         "model": "gpt-3.5-turbo"
+       },
+       "config": {"transform_input": true},
+       "context": {"user": {"subjectId": "123", "subjectType": "user", "subjectSlug": "john_doe", "subjectDisplayName": "John Doe"}}
+     }'
 ```
 In this example, Presidio will detect and anonymize the name and email address in the message content.
 

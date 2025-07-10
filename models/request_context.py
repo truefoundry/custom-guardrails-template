@@ -1,6 +1,7 @@
 from typing import Optional
 from models.user import Subject
 from models.metadata import Metadata
+from pydantic import BaseModel
 
 class RequestContext(dict):
     """
@@ -24,3 +25,7 @@ class RequestContext(dict):
     @metadata.setter
     def metadata(self, value: Metadata) -> None:
         self["metadata"] = value
+
+    def __get_pydantic_core_schema__(self, handler):
+        # Define a custom schema for RequestContext
+        return handler.generate_schema(dict)
