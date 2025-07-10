@@ -36,6 +36,18 @@ Health check endpoint that returns server status.
 ### POST /input
 Input guardrail endpoint for validating and potentially transforming incoming OpenAI chat completion requests.
 
+
+## Models
+- [InputRequest](models/input_request.py) - The input request to the guardrail server in case of guardrail before input to model.
+- [OutputRequest](models/output_request.py) - The output request to the guardrail server in case of guardrail after output from model.
+- [RequestContext](models/request_context.py) - The contextual information like user, metadata, etc sent to the guardrail server.
+- [InputGuardrailResponse](models/input_guardrail_response.py) - The response from the guardrail server in case of guardrail before input to model.
+- [OutputGuardrailResponse](models/output_guardrail_response.py) - The response from the guardrail server in case of guardrail after output from model.
+- [RequestConfig](models/request_config.py) - The configuration for the guardrail server.
+- [Metadata](models/metadata.py) - The metadata which is sent with the request to the ai-gateway so it can be used at guardrail server if needed.
+- [Subject](models/subject.py) - This class is for user/team/virtual-account information.
+
+
 **Request Body:**
 ```json
 {
