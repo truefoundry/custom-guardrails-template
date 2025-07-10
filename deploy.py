@@ -4,7 +4,6 @@ from truefoundry.deploy import (
     NodeSelector,
     Port,
     LocalSource,
-    DockerFileBuild,
     Resources,
     Service,
     PythonBuild,
@@ -13,7 +12,7 @@ from truefoundry.deploy import (
 logging.basicConfig(level=logging.INFO)
 
 service = Service(
-    name="tfy-guardrail-server",
+    name="<SERVICE_NAME>",
     image=Build(
         build_source=LocalSource(local_build=False),
         build_spec=PythonBuild(
@@ -37,12 +36,12 @@ service = Service(
             protocol="TCP",
             expose=True,
             app_protocol="http",
-            host="test-guardrails-server.tfy-usea1-ctl.devtest.truefoundry.tech",
+            host="<HOST_URL>",
         )
     ],
-    workspace_fqn="tfy-usea1-devtest:mcp",
+    workspace_fqn="<WORKSPACE_FQN>",
     replicas=2.0,
 )
 
 
-service.deploy(workspace_fqn="tfy-usea1-devtest:mcp", wait=False)
+service.deploy(workspace_fqn="<WORKSPACE_FQN>", wait=False)

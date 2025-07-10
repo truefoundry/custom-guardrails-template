@@ -23,6 +23,28 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 The server will start on `http://localhost:8000`
 
 
+## Deploying the server to truefoundry
+
+1. Install Truefoundry CLI
+```bash
+pip install truefoundry
+```
+
+2. Login to truefoundry
+```bash
+tfy login --host <HOST_URL>
+```
+
+3. Change the values in deploy.py to the correct values for your deployment.
+
+4. Deploy the server to truefoundry
+```bash
+python deploy.py
+```
+
+
+
+
 ## Endpoints
 
 ### GET /
