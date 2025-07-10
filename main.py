@@ -167,7 +167,7 @@ async def output_guardrail(
             for choice in transformed_body.get("choices", []):
                 if "content" in choice.get("message", {}):
                     # Add a prefix to indicate the response was processed
-                    choice["message"]["content"] = f"[Processed] {choice["message"]["content"]}"
+                    choice["message"]["content"] = f"[Processed] {choice['message']['content']}"
             return transformed_body
 
         logger.info("Output guardrail passed without transformation")
