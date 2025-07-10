@@ -26,7 +26,7 @@ class RequestContext(BaseModel):
             session ID, or other request-scoped attributes. This is passed by user at the time of request from the client to AI Gateway.
     """
     user: Subject
-    metadata: dict[str, str]
+    metadata: Optional[dict[str, str]] = None
 
 
 
@@ -42,7 +42,7 @@ class OutputRequest(BaseModel):
     """
     requestBody: CompletionCreateParams
     responseBody: ChatCompletion
-    config: dict
+    config: Optional[dict] = None
     context: RequestContext
 
 
@@ -57,5 +57,5 @@ class InputRequest(BaseModel):
     """
     requestBody: CompletionCreateParams
     context: RequestContext
-    config: dict
+    config: Optional[dict] = None
 

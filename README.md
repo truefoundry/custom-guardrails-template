@@ -133,7 +133,7 @@ Input guardrail endpoint for validating and potentially transforming incoming Op
     "user": {
       "subjectId": "123",
       "subjectType": "user",
-      "subjectSlug": "john_doe",
+      "subjectSlug": "john_doe@truefoundry.com",
       "subjectDisplayName": "John Doe"
     },
     "metadata": {
@@ -190,7 +190,7 @@ Output guardrail endpoint for validating and potentially transforming OpenAI cha
     "user": {
       "subjectId": "123",
       "subjectType": "user",
-      "subjectSlug": "john_doe",
+      "subjectSlug": "john_doe@truefoundry.com",
       "subjectDisplayName": "John Doe"
     },
     "metadata": {
@@ -219,7 +219,7 @@ curl -X POST "http://localhost:8000/input" \
          "user": {
            "subjectId": "123",
            "subjectType": "user",
-           "subjectSlug": "john_doe",
+           "subjectSlug": "john_doe@truefoundry.com",
            "subjectDisplayName": "John Doe"
          },
          "metadata": {
@@ -242,7 +242,7 @@ curl -X POST "http://localhost:8000/input" \
          "model": "gpt-3.5-turbo"
        },
        "config": {"transform_input": true},
-       "context": {"user": {"subjectId": "123", "subjectType": "user", "subjectSlug": "john_doe", "subjectDisplayName": "John Doe"}}
+       "context": {"user": {"subjectId": "123", "subjectType": "user", "subjectSlug": "john_doe@truefoundry.com", "subjectDisplayName": "John Doe"}}
      }'
 ```
 
@@ -288,7 +288,7 @@ curl -X POST "http://localhost:8000/output" \
       "user": {
         "subjectId": "123",
         "subjectType": "user",
-        "subjectSlug": "john_doe",
+        "subjectSlug": "john_doe@truefoundry.com",
         "subjectDisplayName": "John Doe"
       },
       "metadata": {
@@ -297,6 +297,63 @@ curl -X POST "http://localhost:8000/output" \
     }
   }'
 ```
+
+### Output Guardrail with Transformed Data
+
+The output guardrail endpoint can be used to validate and optionally transform the response from the LLM before returning it to the client. If the output is transformed (e.g., sensitive data is redacted or modified), the endpoint will return the modified response body.
+
+**Example Usage with Output Transformation**
+```bash
+curl -X POST "http://localhost:8000/output" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Hello"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "responseBody": {
+      "id": "chatcmpl-123",
+      "object": "chat.completion",
+      "created": 1677652288,
+      "model": "gpt-3.5-turbo",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Hello! How can I assist you today?"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1,
+        "completion_tokens": 10,
+        "total_tokens": 11
+      }
+    },
+    "config": {
+      "transform_output": true
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "environment": "production"
+      }
+    }
+  }'
+```
+
 
 ### Input Guardrail with PII Removal
 The input guardrail endpoint uses Presidio to detect and remove Personally Identifiable Information (PII) from incoming messages. This ensures that sensitive information is anonymized before further processing.
@@ -314,7 +371,7 @@ The input guardrail endpoint uses Presidio to detect and remove Personally Ident
          "model": "gpt-3.5-turbo"
        },
        "config": {"transform_input": true},
-       "context": {"user": {"subjectId": "123", "subjectType": "user", "subjectSlug": "john_doe", "subjectDisplayName": "John Doe"}}
+       "context": {"user": {"subjectId": "123", "subjectType": "user", "subjectSlug": "john_doe@truefoundry.com", "subjectDisplayName": "John Doe"}}
      }'
 ```
 In this example, Presidio will detect and anonymize the name and email address in the message content.
