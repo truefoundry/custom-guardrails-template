@@ -8,6 +8,7 @@ from truefoundry.deploy import (
     Service,
     PythonBuild,
 )
+from truefoundry_sdk import Autoshutdown
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,10 +23,10 @@ service = Service(
         ),
     ),
     resources=Resources(
-        cpu_request=0.1,
-        cpu_limit=0.1,
-        memory_request=200,
-        memory_limit=500,
+        cpu_request=0.5,
+        cpu_limit=0.5,
+        memory_request=1000,
+        memory_limit=1000,
         ephemeral_storage_request=500,
         ephemeral_storage_limit=500,
         node=NodeSelector(capacity_type="spot"),
@@ -36,11 +37,13 @@ service = Service(
             protocol="TCP",
             expose=True,
             app_protocol="http",
-            host="<HOST_URL>",
+            host="custom-guardrail-server.<HOST>", # Replace <HOST> with your host name for example: custom-guardrail-server.<your-company-name>.truefoundry.com
         )
     ],
+    labels={"tfy_openapi_path": "openapi.json"},
     workspace_fqn="<WORKSPACE_FQN>",
-    replicas=2.0,
+    replicas=1.0,
+    auto_shutdown=Autoshutdown(wait_time=900),
 )
 
 
