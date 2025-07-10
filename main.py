@@ -1,11 +1,12 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Any, Dict, Optional, Union
+from typing import Optional
 import logging
 
-# Import OpenAI types
 from openai.types.chat.chat_completion import ChatCompletion
-from openai.types.chat.completion_create_params import CompletionCreateParams
+
+from models.input_guardrail_response import InputGuardrailResponse
+from models.input_request import InputRequest
+from models.output_request import OutputRequest
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,29 +18,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Pydantic models for guardrail requests
-class InputRequest(BaseModel):
-    requestBody: CompletionCreateParams
-    config: Dict[str, Any]
-    context: Dict[str, Any]
-
-class OutputRequest(BaseModel):
-    requestBody: CompletionCreateParams
-    responseBody: ChatCompletion
-    config: Dict[str, Any]
-    context: Dict[str, Any]
-
-class GuardrailResponse(BaseModel):
-    result: Optional[Any] = None
-    transformed: bool = False
-    message: str = "Success"
-
 @app.get("/")
 async def root():
     """Health check endpoint"""
     return {"message": "Guardrail Server is running", "version": "1.0.0"}
 
-@app.post("/input", response_model=Optional[Any])
+
+
+@app.post("/input", response_model=Optional[InputGuardrailResponse])
 async def input_guardrail(request: InputRequest):
     """
     Input guardrail endpoint
@@ -97,6 +83,8 @@ async def input_guardrail(request: InputRequest):
         # Log unexpected errors and raise as HTTP exception
         logger.error(f"Unexpected error in input guardrail: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Guardrail processing failed: {str(e)}")
+    
+    
 
 @app.post("/output", response_model=Optional[ChatCompletion])
 async def output_guardrail(request: OutputRequest):
@@ -166,6 +154,8 @@ async def output_guardrail(request: OutputRequest):
         # Log unexpected errors and raise as HTTP exception
         logger.error(f"Unexpected error in output guardrail: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Guardrail processing failed: {str(e)}")
+    
+
 
 # Error handlers
 @app.exception_handler(Exception)

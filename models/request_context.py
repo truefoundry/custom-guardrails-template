@@ -1,0 +1,30 @@
+from typing import Optional
+from models.user import Subject
+from models.metadata import Metadata
+
+class RequestContext(dict):
+    """
+    RequestContext is a dictionary-like class for storing arbitrary request context.
+
+    This class exists for type clarity and future extensibility.
+
+    Attributes:
+        user (Optional[Subject]): The user associated with the request context.
+        metadata (Optional[Metadata]): Arbitrary metadata for the request context.
+    """
+
+    @property
+    def user(self) -> Optional[Subject]:
+        return self.get("user")
+
+    @user.setter
+    def user(self, value: Subject) -> None:
+        self["user"] = value
+
+    @property
+    def metadata(self) -> Optional[Metadata]:
+        return self.get("metadata")
+
+    @metadata.setter
+    def metadata(self, value: Metadata) -> None:
+        self["metadata"] = value
