@@ -54,11 +54,21 @@ Input guardrail endpoint for validating and potentially transforming incoming Op
     "transform_input": false
   },
   "context": {
-    "user_id": "123",
-    "session_id": "abc"
+    "user": {
+      "subjectId": "123",
+      "subjectType": "user",
+      "subjectSlug": "john_doe",
+      "subjectDisplayName": "John Doe"
+    },
+    "metadata": {
+      "ip_address": "192.168.1.1",
+      "session_id": "abc123"
+    }
   }
 }
 ```
+
+**Note**: The `requestBody` is accessible within the endpoint and can be used if needed for custom processing.
 
 **Response:**
 - `null` - Guardrails passed, no transformation needed
@@ -107,8 +117,16 @@ Output guardrail endpoint for validating and potentially transforming OpenAI cha
     "filter_by_context": true
   },
   "context": {
-    "user_role": "restricted",
-    "user_id": "123"
+    "user": {
+      "subjectId": "123",
+      "subjectType": "user",
+      "subjectSlug": "john_doe",
+      "subjectDisplayName": "John Doe"
+    },
+    "metadata": {
+      "ip_address": "192.168.1.1",
+      "session_id": "abc123"
+    }
   }
 }
 ```
@@ -162,7 +180,18 @@ curl -X POST "http://localhost:8000/input" \
          "model": "gpt-3.5-turbo"
        },
        "config": {"check_content": true},
-       "context": {"user_id": "123"}
+       "context": {
+         "user": {
+           "subjectId": "123",
+           "subjectType": "user",
+           "subjectSlug": "john_doe",
+           "subjectDisplayName": "John Doe"
+         },
+         "metadata": {
+           "ip_address": "192.168.1.1",
+           "session_id": "abc123"
+         }
+       }
      }'
 ```
 
@@ -178,64 +207,95 @@ curl -X POST "http://localhost:8000/input" \
          "model": "gpt-3.5-turbo"
        },
        "config": {"transform_input": true},
-       "context": {"user_id": "123"}
+       "context": {"user": {"subjectId": "123", "subjectType": "user", "subjectSlug": "john_doe", "subjectDisplayName": "John Doe"}}
      }'
 ```
 
 ### Output Guardrail (Success)
 ```bash
 curl -X POST "http://localhost:8000/output" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "requestBody": {
-         "messages": [
-           {"role": "user", "content": "Hello"}
-         ],
-         "model": "gpt-3.5-turbo"
-       },
-       "responseBody": {
-         "id": "chatcmpl-123",
-         "object": "chat.completion",
-         "created": 1677652288,
-         "model": "gpt-3.5-turbo",
-         "choices": [
-           {
-             "index": 0,
-             "message": {
-               "role": "assistant",
-               "content": "Hello! How can I assist you today?"
-             },
-             "finish_reason": "stop"
-           }
-         ],
-         "usage": {
-           "prompt_tokens": 1,
-           "completion_tokens": 10,
-           "total_tokens": 11
-         }
-       },
-       "config": {"check_sensitive_data": false},
-       "context": {"user_role": "admin"}
-     }'
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Hello"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "responseBody": {
+      "id": "chatcmpl-123",
+      "object": "chat.completion",
+      "created": 1677652288,
+      "model": "gpt-3.5-turbo",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Hello! How can I assist you today?"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1,
+        "completion_tokens": 10,
+        "total_tokens": 11
+      }
+    },
+    "config": {
+      "check_sensitive_data": false
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "environment": "production"
+      }
+    }
+  }'
 ```
 
 ### Input Guardrail with PII Removal
-The input guardrail endpoint now uses Presidio to detect and remove Personally Identifiable Information (PII) from incoming messages. This ensures that sensitive information is anonymized before further processing.
+The input guardrail endpoint uses Presidio to detect and remove Personally Identifiable Information (PII) from incoming messages. This ensures that sensitive information is anonymized before further processing.
 
 **Example Usage with PII Removal**
 ```bash
 curl -X POST "http://localhost:8000/input" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "requestBody": {
-         "messages": [
-           {"role": "user", "content": "My name is John Doe and my email is john.doe@example.com"}
-         ],
-         "model": "gpt-3.5-turbo"
-       },
-       "config": {"check_content": true},
-       "context": {"user_id": "123"}
-     }'
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "My name is John Doe and my email is john.doe@example.com"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "config": {
+      "check_content": true,
+      "transform_input": true
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "environment": "production"
+      }
+    }
+  }'
 ```
 In this example, Presidio will detect and anonymize the name and email address in the message content.
 

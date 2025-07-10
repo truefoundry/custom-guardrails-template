@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 from openai.types.chat.completion_create_params import CompletionCreateParams
 
-from models.request_config import RequestConfig
 from models.request_context import RequestContext
 
 
@@ -15,5 +14,7 @@ class InputRequest(BaseModel):
         context (RequestContext): The context for the guardrail server.
     """
     requestBody: CompletionCreateParams
-    config: RequestConfig
     context: RequestContext
+    config: dict
+    class Config:
+        arbitrary_types_allowed = True

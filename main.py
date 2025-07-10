@@ -109,7 +109,7 @@ async def output_guardrail(
         logger.info(f"Processing output guardrail with config: {request.config}")
         
         # Extract request components
-        request_body = request.requestBody
+        # request_body = request.requestBody User can use this if they want to access the request body
         response_body = request.responseBody
         config = request.config
         context = request.context
