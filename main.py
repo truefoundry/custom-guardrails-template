@@ -9,7 +9,7 @@ from presidio_anonymizer import AnonymizerEngine
 from openai.types.chat.completion_create_params import CompletionCreateParams
 from openai.types.chat.chat_completion import ChatCompletion
 
-from entities import InputRequest, OutputRequest
+from entities import InputGuardrailRequest, OutputGuardrailRequest
 
 # Configure logging for the application
 logging.basicConfig(level=logging.INFO)
@@ -43,7 +43,7 @@ async def root():
 
 
 @app.post("/input", response_model=Optional[dict])
-async def input_guardrail(request: InputRequest):
+async def input_guardrail(request: InputGuardrailRequest):
     """
     Input guardrail endpoint for validating and optionally transforming incoming OpenAI chat completion requests.
 
@@ -63,46 +63,33 @@ async def input_guardrail(request: InputRequest):
         request_body = request.requestBody
         config = request.config
 
-        context = request.context
-
-        # Check if user is not from truefoundry.com
-        if context.user.subjectType == "user" and context.user.subjectSlug.count("truefoundry.com") == 0:
-            raise HTTPException(status_code=400, detail="User is not from truefoundry")
-
-        # Check for prohibited content if enabled in config
-        if config.get("check_content", False):
-            for message in request_body.get("messages", []):
-                if isinstance(message, dict) and message.get("content"):
-                    if "prohibited" in message["content"].lower():
-                        raise HTTPException(status_code=400, detail="Content violates guardrail policy")
+        if not config.get("transform_input", False):
+            return None
 
         # Use Presidio to remove PII if transformation is enabled
-        if config.get("transform_input", False):
-            transformed = False
-            messages = request_body.get("messages", [])
-            transformed_messages = []
-            for message in messages:
-                logger.info(f"Message: {message}")
-                if isinstance(message, dict) and message.get("content"):
-                    # Analyze and anonymize PII
-                    results = analyzer.analyze(text=message["content"], entities=[], language='en')
-                    anonymized_content = anonymizer.anonymize(text=message["content"], analyzer_results=results)
-                    if anonymized_content.text != message["content"]:
-                        transformed = True
-                    transformed_messages.append({
-                        "role": message["role"],
-                        "content": anonymized_content.text
-                    })
+        transformed = False
+        messages = request_body.get("messages", [])
+        transformed_messages = []
+        for message in messages:
+            logger.info(f"Message: {message}")
+            if isinstance(message, dict) and message.get("content"):
+                # Analyze and anonymize PII
+                results = analyzer.analyze(text=message["content"], entities=[], language='en')
+                anonymized_content = anonymizer.anonymize(text=message["content"], analyzer_results=results)
+                if anonymized_content.text != message["content"]:
+                    transformed = True
+                transformed_messages.append({
+                    "role": message["role"],
+                    "content": anonymized_content.text
+                })
+        request_body["messages"] = transformed_messages
+        if transformed:
+            logger.info("Input guardrail passed with transformation")
+            return request_body
+        else:
+            logger.info("Input guardrail passed without transformation")
+            return None
 
-            request_body["messages"] = transformed_messages
-
-            if transformed:
-                return request_body
-            else:
-                return None
-
-        logger.info("Input guardrail passed without transformation")
-        return None
 
     except HTTPException:
         # Re-raise HTTP exceptions to be handled by FastAPI
@@ -115,8 +102,7 @@ async def input_guardrail(request: InputRequest):
 
 @app.post("/output", response_model=Optional[dict])
 async def output_guardrail(
-    request: OutputRequest,
-    raw_request: Request  # FastAPI's Request object to access headers
+    request: OutputGuardrailRequest,
 ):
     """
     Output guardrail endpoint for validating and optionally transforming outgoing OpenAI chat completion responses.
@@ -137,42 +123,23 @@ async def output_guardrail(
         # Extract request components
         response_body = request.responseBody
         config = request.config
-        headers = dict(raw_request.headers)  # Extract all headers as lowercase keys
 
-        # Check for required headers if specified in config
-        if config.get("require_header"):
-            required_header = config["require_header"].lower()
-            if required_header not in headers:
-                logger.warning(f"Missing required header: {required_header}")
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Missing required header: {required_header}"
-                )
-
-            expected_value = config.get("require_header_value")
-            if expected_value is not None:
-                actual_value = headers.get(required_header)
-                if actual_value != expected_value:
-                    logger.warning(
-                        f"Header {required_header} value mismatch: expected '{expected_value}', got '{actual_value}'"
-                    )
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Invalid value for header {required_header}"
-                    )
+        if not config.get("transform_output", False):
+            return None
 
         # Transform response content if transformation is enabled
-        if config.get("transform_output", False):
-            transformed_body = response_body.copy()  # Use dict copy method
-            for choice in transformed_body.get("choices", []):
-                if "content" in choice.get("message", {}):
-                    # Add a prefix to indicate the response was processed
-                    choice["message"]["content"] = f"[Processed] {choice['message']['content']}"
-            return transformed_body
+        transformed_body = response_body.copy()  # Use dict copy method
+        for choice in transformed_body.get("choices", []):
+            if "content" in choice.get("message", {}):
+                # Add a prefix to indicate the response was processed
+                choice["message"]["content"] = f"[Processed] {choice['message']['content']}"
+        
+        logger.info("Output guardrail passed with transformation")
+        return transformed_body
 
-        logger.info("Output guardrail passed without transformation")
-        return None
-
+    except HTTPException:
+        # Re-raise HTTP exceptions to be handled by FastAPI
+        raise
     except Exception as e:
         # Log unexpected errors and raise as HTTP exception
         logger.error(f"Unhandled exception in output_guardrail: {str(e)}")
