@@ -1,9 +1,9 @@
 from typing import Optional
-
+from openai.types.chat.chat_completion import ChatCompletion
 from entities import OutputGuardrailRequest
 
 
-def process_output_guardrail(request: OutputGuardrailRequest) -> Optional[dict]:
+def process_output_guardrail(request: OutputGuardrailRequest) -> Optional[ChatCompletion]:
     if not request.config.get("transform_output", False):
         return None
     transformed_body = request.responseBody.copy()  # Use dict copy method

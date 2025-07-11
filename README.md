@@ -1,6 +1,6 @@
 # Guardrail Server
 
-A FastAPI application that provides PII redaction and output processing endpoints for content validation and transformation.
+A FastAPI application that provides PII redaction and message processing endpoints for content validation and transformation.
 
 ## Architecture
 
@@ -8,7 +8,7 @@ The application follows a modular architecture with separate modules for differe
 
 - **`main.py`**: FastAPI application with route definitions
 - **`pii_redaction.py`**: PII detection and redaction logic using Presidio(this is a sample implementation for reference, you can replace it with your own logic)
-- **`message_processor.py`**: Output processing and transformation logic(this is a sample implementation for reference, you can replace it with your own logic)
+- **`message_processor.py`**: Message processing and transformation logic(this is a sample implementation for reference, you can replace it with your own logic)
 - **`entities.py`**: Pydantic models for request/response validation
 
 ## Endpoints
@@ -24,7 +24,7 @@ The Guardrail Server exposes two main endpoints for validation:
 - `ChatCompletionCreateParams` - Content was transformed, returns the modified request with PII redacted
 - `HTTP 400/500` - Guardrails failed with error details for input.
 
-### Output Processing Endpoint
+### Message Processing Endpoint
 - **POST `/process-message`**
 - Validates and optionally transforms outgoing OpenAI chat completion responses before they are returned to the client. Use this endpoint to enforce output guardrails such as content modifications and response formatting.
 
