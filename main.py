@@ -10,6 +10,8 @@ from openai.types.chat.completion_create_params import CompletionCreateParams
 from openai.types.chat.chat_completion import ChatCompletion
 
 from entities import InputGuardrailRequest, OutputGuardrailRequest
+from guardrails.pii_redaction import process_input_guardrail
+from guardrails.output_processor import process_output_guardrail
 
 # Configure logging for the application
 logging.basicConfig(level=logging.INFO)
