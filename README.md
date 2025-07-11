@@ -8,7 +8,7 @@ The application follows a modular architecture with separate modules for differe
 
 - **`main.py`**: FastAPI application with route definitions
 - **`pii_redaction.py`**: PII detection and redaction logic using Presidio(this is a sample implementation for reference, you can replace it with your own logic)
-- **`output_processor.py`**: Output processing and transformation logic(this is a sample implementation for reference, you can replace it with your own logic)
+- **`message_processor.py`**: Output processing and transformation logic(this is a sample implementation for reference, you can replace it with your own logic)
 - **`entities.py`**: Pydantic models for request/response validation
 
 ## Endpoints
@@ -25,7 +25,7 @@ The Guardrail Server exposes two main endpoints for validation:
 - `HTTP 400/500` - Guardrails failed with error details for input.
 
 ### Output Processing Endpoint
-- **POST `/process-output`**
+- **POST `/process-message`**
 - Validates and optionally transforms outgoing OpenAI chat completion responses before they are returned to the client. Use this endpoint to enforce output guardrails such as content modifications and response formatting.
 
 #### What does guardrail server respond with?
@@ -142,7 +142,7 @@ PII redaction endpoint for validating and potentially transforming incoming Open
 ```
 
 
-### POST /process-output
+### POST /process-message
 Output processing endpoint for validating and potentially transforming OpenAI chat completion responses.
 
 **Request Body:**
@@ -245,7 +245,7 @@ curl -X POST "http://localhost:8000/pii-redaction" \
 
 ### Output Processing (Success)
 ```bash
-curl -X POST "http://localhost:8000/process-output" \
+curl -X POST "http://localhost:8000/process-message" \
   -H "Content-Type: application/json" \
   -d '{
     "requestBody": {
@@ -301,7 +301,7 @@ The output processing endpoint can be used to validate and optionally transform 
 
 **Example Usage with Output Transformation**
 ```bash
-curl -X POST "http://localhost:8000/process-output" \
+curl -X POST "http://localhost:8000/process-message" \
   -H "Content-Type: application/json" \
   -d '{
     "requestBody": {
@@ -378,7 +378,7 @@ In this example, Presidio will detect and anonymize the name and email address i
 The modular architecture makes it easy to customize the guardrail logic:
 
 - **PII Redaction**: Modify `pii_redaction.py` to customize PII detection and redaction rules
-- **Output Processing**: Modify `output_processor.py` to customize output transformation logic
+- **Message Processing**: Modify `message_processor.py` to customize message transformation logic
 - **Request/Response Models**: Modify `entities.py` to add new fields or validation rules
 
 Replace the example guardrail logic in `

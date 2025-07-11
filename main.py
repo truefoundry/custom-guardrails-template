@@ -18,7 +18,7 @@ async def health_check():
 
 app.add_api_route( "/pii-redaction", endpoint=process_input_guardrail, methods=["POST"])
 
-app.add_api_route("/process-output",endpoint=process_output_guardrail,methods=["POST"])
+app.add_api_route("/process-message",endpoint=process_output_guardrail,methods=["POST"])
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
