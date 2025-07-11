@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+pydantic
+openai==1.94.0
+presidio-analyzer
+presidio-anonymizer
