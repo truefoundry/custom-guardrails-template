@@ -81,23 +81,13 @@ The server will start on `http://localhost:8000`
 
 
 ## Deploying the server to truefoundry
+To deploy this guardrail server to Truefoundry, please refer to the official documentation: [Getting Started with Deployment](https://docs.truefoundry.com/docs/deploy-first-service#getting-started-with-deployment).
 
-1. Install Truefoundry CLI
-```bash
-pip install truefoundry
-```
+You can fork this repository and deploy it directly from your GitHub account using the Truefoundry platform. The documentation provides detailed instructions on connecting your GitHub repo and configuring the deployment.
 
-2. Login to truefoundry
-```bash
-tfy login --host <HOST_URL>
-```
+For the latest and most accurate deployment steps, always consult the Truefoundry docs linked above.
 
-3. Change the values in `deploy.py` to the correct values for your deployment. For information about `deploy.py` refer to the [Truefoundry documentation](https://docs.truefoundry.com/docs/deploy-first-service#an-explanation-of-the-deploy-py-file).
 
-4. Deploy the server to truefoundry
-```bash
-python deploy.py
-```
 
 
 
