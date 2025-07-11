@@ -3,8 +3,8 @@ from typing import Optional
 import logging
 
 from entities import InputGuardrailRequest, OutputGuardrailRequest
-from pii_redaction import process_input_guardrail
-from output_processor import process_output_guardrail
+from guardrails.pii_redaction import process_input_guardrail
+from guardrails.output_processor import process_output_guardrail
 
 # Configure logging for the application
 logging.basicConfig(level=logging.INFO)
