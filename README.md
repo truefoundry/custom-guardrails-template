@@ -32,14 +32,14 @@ The Guardrail Server exposes two main endpoints for validation:
 **Note**: The `requestBody` is accessible within the endpoint and can be used if needed for custom processing.
 
 
-### InputRequest
+### InputGuardrailRequest
 
 **Attributes:**
 - `requestBody`: (CompletionCreateParams) The input payload sent to the guardrail server.
 - `config`: (dict) Configuration options for the guardrail server.
 - `context`: (RequestContext) Contextual information such as user and metadata.
 
-### OutputRequest
+### OutputGuardrailRequest
 
 **Attributes:**
 - `requestBody`: (CompletionCreateParams) The input payload originally sent to the model.
