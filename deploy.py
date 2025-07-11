@@ -27,8 +27,8 @@ service = Service(
         cpu_limit=0.5,
         memory_request=1000,
         memory_limit=1000,
-        ephemeral_storage_request=500,
-        ephemeral_storage_limit=500,
+        ephemeral_storage_request=5000,
+        ephemeral_storage_limit=10000,
         node=NodeSelector(capacity_type="spot"),
     ),
     ports=[
