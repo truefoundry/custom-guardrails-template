@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from guardrails.pii_redaction import process_input_guardrail
-from guardrails.output_processor import process_output_guardrail
+from guardrails.message_processor import process_output_guardrail
 
 
 # Create FastAPI app instance
