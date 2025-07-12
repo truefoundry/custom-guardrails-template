@@ -1,25 +1,32 @@
 # Guardrail Server
 
-A FastAPI application that provides input and output guardrail endpoints for content validation and transformation.
+A FastAPI application that provides PII redaction and message processing endpoints for content validation and transformation.
+
+## Architecture
+
+The application follows a modular architecture with separate modules for different functionalities:
+
+- **`main.py`**: FastAPI application with route definitions
+- **`pii_redaction.py`**: PII detection and redaction logic using Presidio(this is a sample implementation for reference, you can replace it with your own logic)
+- **`message_processor.py`**: Message processing and transformation logic(this is a sample implementation for reference, you can replace it with your own logic)
+- **`entities.py`**: Pydantic models for request/response validation
 
 ## Endpoints
 
 The Guardrail Server exposes two main endpoints for validation:
 
-### Input Endpoint
-- **POST `/input`**
-- Validates and optionally transforms incoming OpenAI chat completion requests before they are processed. Use this endpoint to enforce input guardrails such as user authorization, content checks, and PII removal.
+### PII Redaction Endpoint
+- **POST `/pii-redaction`**
+- Validates and optionally transforms incoming OpenAI chat completion requests before they are processed. Uses Presidio to detect and redact Personally Identifiable Information (PII) from messages.
 
 #### What does guardrail server respond with?
 - `null` - Guardrails passed, no transformation needed for input.
-- `ChatCompletionCreateParams` - Content was transformed, returns the modified request
+- `ChatCompletionCreateParams` - Content was transformed, returns the modified request with PII redacted
 - `HTTP 400/500` - Guardrails failed with error details for input.
 
-
-### Output Endpoint
-- **POST `/output`**
-- Validates and optionally transforms outgoing OpenAI chat completion responses before they are returned to the client. Use this endpoint to enforce output guardrails such as header checks and response content modifications.
-
+### Message Processing Endpoint
+- **POST `/process-message`**
+- Validates and optionally transforms outgoing OpenAI chat completion responses before they are returned to the client. Use this endpoint to enforce output guardrails such as content modifications and response formatting.
 
 #### What does guardrail server respond with?
 - `null` - Guardrails passed, no transformation needed for output.
@@ -97,8 +104,8 @@ For the latest and most accurate deployment steps, always consult the Truefoundr
 ### GET /
 Health check endpoint that returns server status.
 
-### POST /input
-Input guardrail endpoint for validating and potentially transforming incoming OpenAI chat completion requests.
+### POST /pii-redaction
+PII redaction endpoint for validating and potentially transforming incoming OpenAI chat completion requests.
 
 
 
@@ -135,8 +142,8 @@ Input guardrail endpoint for validating and potentially transforming incoming Op
 ```
 
 
-### POST /output
-Output guardrail endpoint for validating and potentially transforming OpenAI chat completion responses.
+### POST /process-message
+Output processing endpoint for validating and potentially transforming OpenAI chat completion responses.
 
 **Request Body:**
 ```json
@@ -193,9 +200,9 @@ Output guardrail endpoint for validating and potentially transforming OpenAI cha
 
 ## Example Usage
 
-### Input Guardrail (Success)
+### PII Redaction (Success)
 ```bash
-curl -X POST "http://localhost:8000/input" \
+curl -X POST "http://localhost:8000/pii-redaction" \
      -H "Content-Type: application/json" \
      -d '{
        "requestBody": {
@@ -220,9 +227,9 @@ curl -X POST "http://localhost:8000/input" \
      }'
 ```
 
-### Input Guardrail (With Transformation)
+### PII Redaction (With Transformation)
 ```bash
-curl -X POST "http://localhost:8000/input" \
+curl -X POST "http://localhost:8000/pii-redaction" \
      -H "Content-Type: application/json" \
      -d '{
        "requestBody": {
@@ -236,9 +243,9 @@ curl -X POST "http://localhost:8000/input" \
      }'
 ```
 
-### Output Guardrail (Success)
+### Output Processing (Success)
 ```bash
-curl -X POST "http://localhost:8000/output" \
+curl -X POST "http://localhost:8000/process-message" \
   -H "Content-Type: application/json" \
   -d '{
     "requestBody": {
@@ -288,13 +295,13 @@ curl -X POST "http://localhost:8000/output" \
   }'
 ```
 
-### Output Guardrail with Transformed Data
+### Output Processing with Transformed Data
 
-The output guardrail endpoint can be used to validate and optionally transform the response from the LLM before returning it to the client. If the output is transformed (e.g., sensitive data is redacted or modified), the endpoint will return the modified response body.
+The output processing endpoint can be used to validate and optionally transform the response from the LLM before returning it to the client. If the output is transformed (e.g., content is modified or formatted), the endpoint will return the modified response body.
 
 **Example Usage with Output Transformation**
 ```bash
-curl -X POST "http://localhost:8000/output" \
+curl -X POST "http://localhost:8000/process-message" \
   -H "Content-Type: application/json" \
   -d '{
     "requestBody": {
@@ -345,13 +352,13 @@ curl -X POST "http://localhost:8000/output" \
 ```
 
 
-### Input Guardrail with PII Removal
-The input guardrail endpoint uses Presidio to detect and remove Personally Identifiable Information (PII) from incoming messages. This ensures that sensitive information is anonymized before further processing.
+### PII Redaction with Presidio
+The PII redaction endpoint uses Presidio to detect and remove Personally Identifiable Information (PII) from incoming messages. This ensures that sensitive information is anonymized before further processing.
 
 **Example Usage with PII Removal**
 ```bash
 
-  curl -X POST "http://localhost:8000/input" \
+  curl -X POST "http://localhost:8000/pii-redaction" \
      -H "Content-Type: application/json" \
      -d '{
        "requestBody": {
@@ -367,5 +374,11 @@ The input guardrail endpoint uses Presidio to detect and remove Personally Ident
 In this example, Presidio will detect and anonymize the name and email address in the message content.
 
 ## Customization
+
+The modular architecture makes it easy to customize the guardrail logic:
+
+- **PII Redaction**: Modify `pii_redaction.py` to customize PII detection and redaction rules
+- **Message Processing**: Modify `message_processor.py` to customize message transformation logic
+- **Request/Response Models**: Modify `entities.py` to add new fields or validation rules
 
 Replace the example guardrail logic in `
