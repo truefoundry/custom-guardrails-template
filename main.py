@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from guardrails.pii_redaction import process_input_guardrail
-from guardrails.message_processor import process_output_guardrail
+from guardrails.nsfw_filtering import nsfw_filtering
 
 
 # Create FastAPI app instance
@@ -18,7 +18,7 @@ async def health_check():
 
 app.add_api_route( "/pii-redaction", endpoint=process_input_guardrail, methods=["POST"])
 
-app.add_api_route("/process-message",endpoint=process_output_guardrail,methods=["POST"])
+app.add_api_route("/nsfw-filtering",endpoint=nsfw_filtering,methods=["POST"])
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):

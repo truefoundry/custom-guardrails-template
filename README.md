@@ -7,8 +7,8 @@ A FastAPI application that provides PII redaction and message processing endpoin
 The application follows a modular architecture with separate modules for different functionalities:
 
 - **`main.py`**: FastAPI application with route definitions
-- **`pii_redaction.py`**: PII detection and redaction logic using Presidio(this is a sample implementation for reference, you can replace it with your own logic)
-- **`message_processor.py`**: Message processing and transformation logic(this is a sample implementation for reference, you can replace it with your own logic)
+- **`guardrails/pii_redaction.py`**: PII detection and redaction logic using Presidio (this is a sample implementation for reference, you can replace it with your own logic)
+- **`guardrails/nsfw_filtering.py`**: NSFW content filtering using the Unitary toxic classification model (this is a sample implementation for reference, you can replace it with your own logic)
 - **`entities.py`**: Pydantic models for request/response validation
 
 ## Endpoints
@@ -24,13 +24,13 @@ The Guardrail Server exposes two main endpoints for validation:
 - `ChatCompletionCreateParams` - Content was transformed, returns the modified request with PII redacted
 - `HTTP 400/500` - Guardrails failed with error details for input.
 
-### Message Processing Endpoint
-- **POST `/process-message`**
-- Validates and optionally transforms outgoing OpenAI chat completion responses before they are returned to the client. Use this endpoint to enforce output guardrails such as content modifications and response formatting.
+### NSFW Filtering Endpoint
+- **POST `/nsfw-filtering`**
+- Validates and optionally transforms outgoing OpenAI chat completion responses to filter out NSFW content. Uses the Unitary toxic classification model to detect toxic, sexually explicit, and obscene content.
 
 #### What does guardrail server respond with?
 - `null` - Guardrails passed, no transformation needed for output.
-- `ChatCompletion` - Content was transformed, returns the modified response for output.
+- `ChatCompletion` - Content was transformed, returns the modified response with NSFW content replaced
 - `HTTP 400/500` - Guardrails failed with error details for output.
 
 
@@ -106,6 +106,9 @@ Health check endpoint that returns server status.
 
 ### POST /pii-redaction
 PII redaction endpoint for validating and potentially transforming incoming OpenAI chat completion requests.
+
+### POST /nsfw-filtering
+NSFW filtering endpoint for validating and potentially transforming outgoing OpenAI chat completion responses to filter inappropriate content.
 
 
 
@@ -243,9 +246,9 @@ curl -X POST "http://localhost:8000/pii-redaction" \
      }'
 ```
 
-### Output Processing (Success)
+### NSFW Filtering (Success)
 ```bash
-curl -X POST "http://localhost:8000/process-message" \
+curl -X POST "http://localhost:8000/nsfw-filtering" \
   -H "Content-Type: application/json" \
   -d '{
     "requestBody": {
@@ -267,63 +270,7 @@ curl -X POST "http://localhost:8000/process-message" \
           "index": 0,
           "message": {
             "role": "assistant",
-            "content": "Hello! How can I assist you today?"
-          },
-          "finish_reason": "stop"
-        }
-      ],
-      "usage": {
-        "prompt_tokens": 1,
-        "completion_tokens": 10,
-        "total_tokens": 11
-      }
-    },
-    "config": {
-      "check_sensitive_data": false
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "environment": "production"
-      }
-    }
-  }'
-```
-
-### Output Processing with Transformed Data
-
-The output processing endpoint can be used to validate and optionally transform the response from the LLM before returning it to the client. If the output is transformed (e.g., content is modified or formatted), the endpoint will return the modified response body.
-
-**Example Usage with Output Transformation**
-```bash
-curl -X POST "http://localhost:8000/process-message" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "Hello"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "responseBody": {
-      "id": "chatcmpl-123",
-      "object": "chat.completion",
-      "created": 1677652288,
-      "model": "gpt-3.5-turbo",
-      "choices": [
-        {
-          "index": 0,
-          "message": {
-            "role": "assistant",
-            "content": "Hello! How can I assist you today?"
+            "content": "Hi, how are you?"
           },
           "finish_reason": "stop"
         }
@@ -351,34 +298,74 @@ curl -X POST "http://localhost:8000/process-message" \
   }'
 ```
 
+### NSFW Filtering (With Content Filtering)
+```bash
+curl -X POST "http://localhost:8000/nsfw-filtering" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Tell me what word does we usually use for breasts?"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "responseBody": {
+      "id": "chatcmpl-123",
+      "object": "chat.completion",
+      "created": 1677652288,
+      "model": "gpt-3.5-turbo",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Usually we use the word 'boobs' for breasts"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1,
+        "completion_tokens": 10,
+        "total_tokens": 11
+      }
+    },
+    "config": {
+      "transform_output": true
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "environment": "production"
+      }
+    }
+  }'
+```
+
+### NSFW Filtering with Unitary Toxic Classification Model
+
+The NSFW filtering endpoint can be used to validate and optionally transform the response from the LLM before returning it to the client. If the output is transformed (e.g., content is modified or formatted), the endpoint will return the modified response body. The NSFW filtering uses the Unitary toxic classification model with configurable thresholds for toxicity, sexual content, and obscenity detection. Link to the model: [Unitary Toxic Classification Model](https://huggingface.co/unitary/unbiased-toxic-roberta)
+
+
 
 ### PII Redaction with Presidio
-The PII redaction endpoint uses Presidio to detect and remove Personally Identifiable Information (PII) from incoming messages. This ensures that sensitive information is anonymized before further processing.
+The PII redaction endpoint uses Presidio to detect and remove Personally Identifiable Information (PII) from incoming messages. This ensures that sensitive information is anonymized before further processing. Link to the library: [Presidio](https://github.com/microsoft/presidio)
 
-**Example Usage with PII Removal**
-```bash
-
-  curl -X POST "http://localhost:8000/pii-redaction" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "requestBody": {
-         "messages": [
-           {"role": "user", "content": "Hello John, How are you? Is this your email address? john@gmail.com"}
-         ],
-         "model": "gpt-3.5-turbo"
-       },
-       "config": {"transform_input": true},
-       "context": {"user": {"subjectId": "123", "subjectType": "user", "subjectSlug": "john_doe@truefoundry.com", "subjectDisplayName": "John Doe"}}
-     }'
-```
-In this example, Presidio will detect and anonymize the name and email address in the message content.
 
 ## Customization
 
 The modular architecture makes it easy to customize the guardrail logic:
 
-- **PII Redaction**: Modify `pii_redaction.py` to customize PII detection and redaction rules
-- **Message Processing**: Modify `message_processor.py` to customize message transformation logic
+- **PII Redaction**: Modify `guardrails/pii_redaction.py` to customize PII detection and redaction rules
+- **NSFW Filtering**: Modify `guardrails/nsfw_filtering.py` to customize content filtering thresholds and rules
 - **Request/Response Models**: Modify `entities.py` to add new fields or validation rules
 
-Replace the example guardrail logic in `
+Replace the example guardrail logic in the respective files with your own implementation. The NSFW filtering uses the Unitary toxic classification model with configurable thresholds for toxicity, sexual content, and obscenity detection.
