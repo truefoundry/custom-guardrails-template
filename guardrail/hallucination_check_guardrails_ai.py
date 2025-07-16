@@ -6,7 +6,7 @@ from guardrails.hub import (
 )
 from entities import OutputGuardrailRequest
 
-guard = Guard().use(GroundedAIHallucination, on_fail="exception")
+guard = Guard().use(GroundedAIHallucination, on_fail="exception",quant=False)
 
 def hallucination_check(request: OutputGuardrailRequest) -> Optional[dict]:
     try:
