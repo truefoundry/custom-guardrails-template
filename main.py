@@ -1,12 +1,12 @@
 from fastapi import FastAPI, HTTPException
 # from guardrail.pii_detection_guardrails_ai import pii_detection_guardrails_ai
 # from guardrail.competitor_check_guardrails_ai import competitor_check
-from guardrail.hallucination_check_guardrails_ai import hallucination_check
+# from guardrail.hallucination_check_guardrails_ai import hallucination_check
 from guardrail.pii_redaction_presidio import process_input_guardrail
 from guardrail.nsfw_filtering_local_eval import nsfw_filtering
 from guardrail.drug_mention_guardrails_ai import drug_mention
 from guardrail.web_sanitization_guardrails_ai import web_sanitization
-from guardrail.nsfw_filtering_guardrails_ai import nsfw_filtering_guardrails_ai
+# from guardrail.nsfw_filtering_guardrails_ai import nsfw_filtering_guardrails_ai
 
 # Create FastAPI app instance
 app = FastAPI(
