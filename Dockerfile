@@ -29,4 +29,4 @@ ENV GUARDRAILS_TOKEN=$GUARDRAILS_TOKEN
 CMD guardrails configure --disable-metrics --disable-remote-inferencing --token $GUARDRAILS_TOKEN && \
     guardrails hub install hub://cartesia/mentions_drugs && \
     guardrails hub install hub://guardrails/web_sanitization && \
-    python main.py
+    uvicorn main:app --host 0.0.0.0 --port 8000
