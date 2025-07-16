@@ -2,8 +2,6 @@ from typing import Optional
 from presidio_analyzer import AnalyzerEngine
 from presidio_anonymizer import AnonymizerEngine
 
-from openai.types.chat.completion_create_params import CompletionCreateParams
-
 from entities import InputGuardrailRequest
 
 # Initialize Presidio
