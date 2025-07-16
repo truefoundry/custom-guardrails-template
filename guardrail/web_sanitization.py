@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import HTTPException
-from guardrail_integrations import Guard
+from guardrail import Guard
 from guardrails_grhub_web_sanitization import WebSanitization
 
 from entities import InputGuardrailRequest

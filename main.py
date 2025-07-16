@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
-from guardrail_integrations.pii_redaction import process_input_guardrail
-from guardrail_integrations.nsfw_filtering import nsfw_filtering
-from guardrail_integrations.drug_mention import drug_mention
-from guardrail_integrations.web_sanitization import web_sanitization
+from guardrail.pii_redaction import process_input_guardrail
+from guardrail.nsfw_filtering import nsfw_filtering
+from guardrail.drug_mention import drug_mention
+from guardrail.web_sanitization import web_sanitization
 
 # Create FastAPI app instance
 app = FastAPI(
