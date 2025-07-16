@@ -6,7 +6,7 @@ from guardrails.hub import (
 )
 from entities import OutputGuardrailRequest
 
-guard = Guard().use(CompetitorCheck, on_fail="exception")
+guard = Guard().use(CompetitorCheck, on_fail="exception",competitors=["Apple","Samsung","Xiaomi","Poco","Realme","OnePlus","Vivo","Oppo","Huawei","Lenovo","Dell","HP","Toshiba","Sony","LG","Samsung","Xiaomi","Poco","Realme","OnePlus","Vivo","Oppo","Huawei","Lenovo","Dell","HP","Toshiba","Sony","LG"])
 
 def competitor_check(request: OutputGuardrailRequest) -> Optional[dict]:
     try:

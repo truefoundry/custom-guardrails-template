@@ -1,19 +1,26 @@
 # Guardrail Server
 
-A FastAPI application that provides PII redaction and message processing endpoints for content validation and transformation.
+A FastAPI application that provides comprehensive content validation and transformation endpoints using various guardrail technologies including Presidio, Guardrails AI, and local evaluation models.
 
 ## Architecture
 
 The application follows a modular architecture with separate modules for different functionalities:
 
 - **`main.py`**: FastAPI application with route definitions
-- **`guardrails/pii_redaction.py`**: PII detection and redaction logic using Presidio (this is a sample implementation for reference, you can replace it with your own logic)
-- **`guardrails/nsfw_filtering.py`**: NSFW content filtering using the Unitary toxic classification model (this is a sample implementation for reference, you can replace it with your own logic)
+- **`guardrail/`**: Directory containing all guardrail implementations
+  - **`pii_redaction_presidio.py`**: PII detection and redaction using Presidio
+  - **`pii_detection_guardrails_ai.py`**: PII detection using Guardrails AI
+  - **`nsfw_filtering_local_eval.py`**: NSFW content filtering using local Unitary toxic classification model
+  - **`nsfw_filtering_guardrails_ai.py`**: NSFW content filtering using Guardrails AI
+  - **`drug_mention_guardrails_ai.py`**: Drug mention detection using Guardrails AI
+  - **`web_sanitization_guardrails_ai.py`**: Web content sanitization using Guardrails AI
+  - **`hallucination_check_guardrails_ai.py`**: Hallucination detection using Guardrails AI (not currently exposed)
+  - **`competitor_check_guardrails_ai.py`**: Competitor mention detection using Guardrails AI (not currently exposed)
 - **`entities.py`**: Pydantic models for request/response validation
 
-## Endpoints
+## Currently Exposed Endpoints
 
-The Guardrail Server exposes two main endpoints for validation:
+The Guardrail Server currently exposes four main endpoints for validation:
 
 ### PII Redaction Endpoint
 - **POST `/pii-redaction`**
@@ -21,7 +28,7 @@ The Guardrail Server exposes two main endpoints for validation:
 
 #### What does guardrail server respond with?
 - `null` - Guardrails passed, no transformation needed for input.
-- `ChatCompletionCreateParams` - Content was transformed, returns the modified request with PII redacted
+- `ChatCompletionCreateParams` - Content was transformed, returns the modified request with PII redacted.
 - `HTTP 400/500` - Guardrails failed with error details for input.
 
 ### NSFW Filtering Endpoint
@@ -40,7 +47,6 @@ The Guardrail Server exposes two main endpoints for validation:
 - `null` - Guardrails passed, no transformation needed for input.
 - `HTTP 400/500` - Guardrails failed with error details for input.
 
-
 ### Web Sanitization Endpoint
 - **POST `/web-sanitization`**
 - Validates and optionally transforms incoming OpenAI chat completion requests before they are processed. Uses Guardrails AI to detect and reject responses that contain malicious content.
@@ -49,16 +55,45 @@ The Guardrail Server exposes two main endpoints for validation:
 - `null` - Guardrails passed, no transformation needed for input.
 - `HTTP 400/500` - Guardrails failed with error details for input.
 
+### PII Detection (Guardrails AI) Endpoint
+- **POST `/pii-detection`**
+- Validates incoming OpenAI chat completion requests to detect the presence of Personally Identifiable Information (PII) using Guardrails AI. Does not redact, only detects and reports PII.
+
+#### What does guardrail server respond with?
+- `null` - Guardrails passed, no PII detected in input.
+- `HTTP 400/500` - Guardrails failed with error details for input.
+
+### Hallucination Detection Endpoint
+- **POST `/hallucination-check`**
+- Validates outgoing OpenAI chat completion responses to detect hallucinations using Guardrails AI's GroundedAIHallucination validator.
+
+#### What does guardrail server respond with?
+- `null` - Guardrails passed, no hallucination detected in output.
+- `HTTP 400/500` - Guardrails failed with error details for output.
+
+### Competitor Mention Detection Endpoint
+- **POST `/competitor-check`**
+- Validates outgoing OpenAI chat completion responses to detect mentions of competitors using Guardrails AI.
+
+#### What does guardrail server respond with?
+- `null` - Guardrails passed, no competitor mention detected in output.
+- `HTTP 400/500` - Guardrails failed with error details for output.
+
+### NSFW Filtering (Guardrails AI) Endpoint
+- **POST `/nsfw-filtering-guardrails-ai`**
+- Validates and optionally transforms outgoing OpenAI chat completion responses to filter out NSFW content. Uses Guardrails AI's NSFWText validator to detect and reject inappropriate content.
+
+#### What does guardrail server respond with?
+- `null` - Guardrails passed, no transformation needed for output.
+- `HTTP 400/500` - Guardrails failed with error details for output.
+
 ## How to build the docker image?
 
 ```bash
  docker build --build-arg GUARDRAILS_TOKEN="<GUARDRAILS_AI_TOKEN>" -t custom-guardrails-template:latest .
 ```
 
-
-
 **Note**: The `requestBody` is accessible within the endpoint and can be used if needed for custom processing.
-
 
 ### InputGuardrailRequest
 
@@ -86,7 +121,6 @@ The Guardrail Server exposes two main endpoints for validation:
 The `config` field is a dictionary used to store arbitrary request configuration. These are the options which are set when you create a custom guardrail integration. These are passed to the guardrail server as is, so you can use them in your guardrail logic.
 For more information about the config options, refer to the [Truefoundry documentation](https://docs.truefoundry.com/gateway/custom-guardrails).
 
-
 ## Installation
 
 1. Install dependencies:
@@ -107,18 +141,12 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 The server will start on `http://localhost:8000`
 
-
 ## Deploying the server to truefoundry
 To deploy this guardrail server to Truefoundry, please refer to the official documentation: [Getting Started with Deployment](https://docs.truefoundry.com/docs/deploy-first-service#getting-started-with-deployment).
 
 You can fork this repository and deploy it directly from your GitHub account using the Truefoundry platform. The documentation provides detailed instructions on connecting your GitHub repo and configuring the deployment.
 
 For the latest and most accurate deployment steps, always consult the Truefoundry docs linked above.
-
-
-
-
-
 
 ## Endpoints
 
@@ -168,7 +196,6 @@ Web content sanitization endpoint for validating and potentially transforming in
   }
 }
 ```
-
 
 ### POST /process-message
 Output processing endpoint for validating and potentially transforming OpenAI chat completion responses.
@@ -545,6 +572,7 @@ curl -X POST "http://localhost:8000/web-sanitization" \
   }'
 ```
 
+## Technology Stack
 
 ### PII Redaction with Presidio
 The PII redaction endpoint uses Presidio to detect and remove Personally Identifiable Information (PII) from incoming messages. This ensures that sensitive information is anonymized before further processing. Link to the library: [Presidio](https://github.com/microsoft/presidio)
@@ -560,14 +588,51 @@ The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/
 The web sanitization endpoint uses Guardrails AI to detect and reject responses that contain malicious content. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)
 The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/guardrails/web_sanitization)
 
+
+### PII Detection with Guardrails AI
+The PII detection endpoint uses Guardrails AI to identify the presence of Personally Identifiable Information (PII) in incoming messages. Unlike the Presidio-based redaction endpoint, this endpoint only detects and reports PII without modifying the content. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)  
+The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/guardrails/detect_pii)
+
+### NSFW Filtering with Guardrails AI
+The NSFW filtering (Guardrails AI) endpoint uses the NSFWText validator from Guardrails AI to detect and reject inappropriate content in outgoing responses. This validator supports configurable thresholds (default: 0.8) and sentence-level validation for more granular control. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)  
+The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/guardrails/nsfw_text)
+
+### Hallucination Detection with Guardrails AI
+The hallucination detection endpoint uses Guardrails AI's GroundedAIHallucination validator to identify potential hallucinations in AI-generated responses. This helps ensure that outputs are grounded and factually accurate. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)  
+The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/groundedai/grounded_ai_hallucination)
+
+### Competitor Mention Detection with Guardrails AI
+The competitor mention detection endpoint uses Guardrails AI to identify and reject responses that mention competitors. This is useful for compliance and brand safety in AI-generated outputs. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)  
+The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/guardrails/competitor_check)
+
 ## Customization
 
 The modular architecture makes it easy to customize the guardrail logic:
 
-- **PII Redaction**: Modify `guardrail/pii_redaction.py` to customize PII detection and redaction rules
-- **NSFW Filtering**: Modify `guardrail/nsfw_filtering.py` to customize content filtering thresholds and rules
-- **Drug Mention Detection**: Modify `guardrail/drug_mention.py` to customize drug mention detection rules
-- **Web Sanitization**: Modify `guardrail/web_sanitization.py` to customize web sanitization rules
+- **PII Redaction**: Modify `guardrail/pii_redaction_presidio.py` to customize PII detection and redaction rules
+- **PII Detection (Guardrails AI)**: Modify `guardrail/pii_detection_guardrails_ai.py` to customize PII detection using Guardrails AI
+- **NSFW Filtering (Local)**: Modify `guardrail/nsfw_filtering_local_eval.py` to customize content filtering thresholds and rules
+- **NSFW Filtering (Guardrails AI)**: Modify `guardrail/nsfw_filtering_guardrails_ai.py` to customize NSFW filtering using Guardrails AI
+- **Drug Mention Detection**: Modify `guardrail/drug_mention_guardrails_ai.py` to customize drug mention detection rules
+- **Web Sanitization**: Modify `guardrail/web_sanitization_guardrails_ai.py` to customize web sanitization rules
+- **Hallucination Check**: Modify `guardrail/hallucination_check_guardrails_ai.py` to customize hallucination detection rules
+- **Competitor Check**: Modify `guardrail/competitor_check_guardrails_ai.py` to customize competitor mention detection rules
 - **Request/Response Models**: Modify `entities.py` to add new fields or validation rules
 
 Replace the example guardrail logic in the respective files with your own implementation. The NSFW filtering uses the Unitary toxic classification model with configurable thresholds for toxicity, sexual content, and obscenity detection.
+
+## Adding New Endpoints
+
+To expose the available but unexposed guardrail implementations as endpoints, add the following routes to `main.py`:
+
+```python
+from guardrail.pii_detection_guardrails_ai import pii_detection_guardrails_ai
+from guardrail.nsfw_filtering_guardrails_ai import nsfw_filtering_guardrails_ai
+from guardrail.hallucination_check_guardrails_ai import hallucination_check
+from guardrail.competitor_check_guardrails_ai import competitor_check
+
+app.add_api_route("/pii-detection", endpoint=pii_detection_guardrails_ai, methods=["POST"])
+app.add_api_route("/nsfw-filtering-ai", endpoint=nsfw_filtering_guardrails_ai, methods=["POST"])
+app.add_api_route("/hallucination-check", endpoint=hallucination_check, methods=["POST"])
+app.add_api_route("/competitor-check", endpoint=competitor_check, methods=["POST"])
+```
