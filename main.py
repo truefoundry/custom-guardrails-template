@@ -1,8 +1,12 @@
 from fastapi import FastAPI, HTTPException
-from guardrail.pii_redaction import process_input_guardrail
-from guardrail.nsfw_filtering import nsfw_filtering
-from guardrail.drug_mention import drug_mention
-from guardrail.web_sanitization import web_sanitization
+from guardrail.pii_detection_guardrails_ai import pii_detection_guardrails_ai
+from guardrail.competitor_check_guardrails_ai import competitor_check
+from guardrail.hallucination_check_guardrails_ai import hallucination_check
+from guardrail.pii_redaction_presidio import process_input_guardrail
+from guardrail.nsfw_filtering_local_eval import nsfw_filtering
+from guardrail.drug_mention_guardrails_ai import drug_mention
+from guardrail.web_sanitization_guardrails_ai import web_sanitization
+from guardrail.nsfw_filtering_guardrails_ai import nsfw_filtering_guardrails_ai
 
 # Create FastAPI app instance
 app = FastAPI(
@@ -24,6 +28,16 @@ app.add_api_route("/nsfw-filtering",endpoint=nsfw_filtering,methods=["POST"])
 app.add_api_route("/drug-mention",endpoint=drug_mention,methods=["POST"])
 
 app.add_api_route("/web-sanitization",endpoint=web_sanitization,methods=["POST"])
+
+app.add_api_route("/pii-detection",endpoint=pii_detection_guardrails_ai,methods=["POST"])
+
+app.add_api_route("/nsfw-filtering-guardrails-ai",endpoint=nsfw_filtering_guardrails_ai,methods=["POST"])
+
+app.add_api_route("/hallucination-check",endpoint=hallucination_check,methods=["POST"])
+
+app.add_api_route("/competitor-check",endpoint=competitor_check,methods=["POST"])
+
+
 
 
 @app.exception_handler(Exception)

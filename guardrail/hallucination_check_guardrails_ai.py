@@ -1,14 +1,14 @@
 from typing import Optional
 from fastapi import HTTPException
-from guardrail import Guard
-from guardrails.hub import MentionsDrugs
-
+from guardrails import Guard
+from guardrails.hub import (
+    GroundedAIHallucination
+)
 from entities import OutputGuardrailRequest
 
-# Setup the Guard with the validator
-guard = Guard().use(MentionsDrugs, on_fail="exception")
+guard = Guard().use(GroundedAIHallucination, on_fail="exception")
 
-def drug_mention(request: OutputGuardrailRequest) -> Optional[dict]:
+def hallucination_check(request: OutputGuardrailRequest) -> Optional[dict]:
     try:
         for choice in request.responseBody.get("choices", []):
             if "content" in choice.get("message", {}):
