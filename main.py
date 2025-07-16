@@ -1,7 +1,8 @@
-from fastapi import FastAPI
-from guardrails.pii_redaction import process_input_guardrail
-from guardrails.nsfw_filtering import nsfw_filtering
-
+from fastapi import FastAPI, HTTPException
+from guardrail.presidio.pii_redaction import process_input_guardrail
+from guardrail.local_eval.nsfw_filtering import nsfw_filtering
+from guardrail.guardrails_ai.drug_mention import drug_mention
+from guardrail.guardrails_ai.web_sanitization import web_sanitization
 
 # Create FastAPI app instance
 app = FastAPI(
@@ -20,9 +21,17 @@ app.add_api_route( "/pii-redaction", endpoint=process_input_guardrail, methods=[
 
 app.add_api_route("/nsfw-filtering",endpoint=nsfw_filtering,methods=["POST"])
 
+app.add_api_route("/drug-mention",endpoint=drug_mention,methods=["POST"])
+
+app.add_api_route("/web-sanitization",endpoint=web_sanitization,methods=["POST"])
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    return {"error": "Internal server error", "detail": str(exc)}
+    if isinstance(exc, HTTPException):
+        return {"error": "Internal server error", "detail": str(exc.detail)}
+    else:
+        return {"error": "Internal server error", "detail": str(exc)}
 
 # Run the app using Uvicorn if this script is executed directly
 if __name__ == "__main__":
