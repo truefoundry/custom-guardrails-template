@@ -30,9 +30,24 @@ The Guardrail Server exposes two main endpoints for validation:
 
 #### What does guardrail server respond with?
 - `null` - Guardrails passed, no transformation needed for output.
-- `ChatCompletion` - Content was transformed, returns the modified response with NSFW content replaced
 - `HTTP 400/500` - Guardrails failed with error details for output.
 
+### Drug Mention Detection Endpoint
+- **POST `/drug-mention`**
+- Validates and optionally transforms incoming OpenAI chat completion requests before they are processed. Uses Guardrails AI to detect and reject responses that mention drugs.
+
+#### What does guardrail server respond with?
+- `null` - Guardrails passed, no transformation needed for input.
+- `HTTP 400/500` - Guardrails failed with error details for input.
+
+
+### Web Sanitization Endpoint
+- **POST `/web-sanitization`**
+- Validates and optionally transforms incoming OpenAI chat completion requests before they are processed. Uses Guardrails AI to detect and reject responses that contain malicious content.
+
+#### What does guardrail server respond with?
+- `null` - Guardrails passed, no transformation needed for input.
+- `HTTP 400/500` - Guardrails failed with error details for input.
 
 ## How to build the docker image?
 
@@ -549,10 +564,10 @@ The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/
 
 The modular architecture makes it easy to customize the guardrail logic:
 
-- **PII Redaction**: Modify `guardrail/presidio/pii_redaction.py` to customize PII detection and redaction rules
-- **NSFW Filtering**: Modify `guardrail/local_eval/nsfw_filtering.py` to customize content filtering thresholds and rules
-- **Drug Mention Detection**: Modify `guardrail/guardrails_ai/drug_mention.py` to customize drug mention detection rules
-- **Web Sanitization**: Modify `guardrail/guardrails_ai/web_sanitization.py` to customize web sanitization rules
+- **PII Redaction**: Modify `guardrail/pii_redaction.py` to customize PII detection and redaction rules
+- **NSFW Filtering**: Modify `guardrail/nsfw_filtering.py` to customize content filtering thresholds and rules
+- **Drug Mention Detection**: Modify `guardrail/drug_mention.py` to customize drug mention detection rules
+- **Web Sanitization**: Modify `guardrail/web_sanitization.py` to customize web sanitization rules
 - **Request/Response Models**: Modify `entities.py` to add new fields or validation rules
 
 Replace the example guardrail logic in the respective files with your own implementation. The NSFW filtering uses the Unitary toxic classification model with configurable thresholds for toxicity, sexual content, and obscenity detection.

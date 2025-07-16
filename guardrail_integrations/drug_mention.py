@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import HTTPException
-from guardrails import Guard
+from guardrail_integrations import Guard
 from guardrails.hub import MentionsDrugs
 
 from entities import OutputGuardrailRequest
