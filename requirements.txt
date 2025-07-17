@@ -8,4 +8,3 @@ torch
 transformers
 guardrails-ai
 guardrails-ai[api]
-guardrails_grhub_web_sanitization
