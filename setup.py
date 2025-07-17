@@ -1,9 +1,7 @@
 import os
-from dotenv import load_dotenv
 import subprocess
 
 # Load environment variables from .env file
-load_dotenv()
 
 GUARDRAILS_TOKEN = os.getenv("GUARDRAILS_TOKEN")
 if not GUARDRAILS_TOKEN:
