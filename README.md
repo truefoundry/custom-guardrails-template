@@ -11,11 +11,8 @@ The application follows a modular architecture with separate modules for differe
   - **`pii_redaction_presidio.py`**: PII detection and redaction using Presidio
   - **`pii_detection_guardrails_ai.py`**: PII detection using Guardrails AI
   - **`nsfw_filtering_local_eval.py`**: NSFW content filtering using local Unitary toxic classification model
-  - **`nsfw_filtering_guardrails_ai.py`**: NSFW content filtering using Guardrails AI
   - **`drug_mention_guardrails_ai.py`**: Drug mention detection using Guardrails AI
   - **`web_sanitization_guardrails_ai.py`**: Web content sanitization using Guardrails AI
-  - **`hallucination_check_guardrails_ai.py`**: Hallucination detection using Guardrails AI
-  - **`competitor_check_guardrails_ai.py`**: Competitor mention detection using Guardrails AI
 - **`entities.py`**: Pydantic models for request/response validation
 
 ## Currently Exposed Endpoints
@@ -63,29 +60,7 @@ The Guardrail Server currently exposes eight main endpoints for validation:
 - `null` - Guardrails passed, no PII detected in input.
 - `HTTP 400/500` - Guardrails failed with error details for input.
 
-### NSFW Filtering (Guardrails AI) Endpoint
-- **POST `/nsfw-filtering-guardrails-ai`**
-- Validates outgoing OpenAI chat completion responses to filter out NSFW content. Uses Guardrails AI's NSFWText validator with configurable thresholds (default: 0.8) and sentence-level validation.
 
-#### What does guardrail server respond with?
-- `null` - Guardrails passed, no NSFW content detected in output.
-- `HTTP 400/500` - Guardrails failed with error details for output.
-
-### Hallucination Detection Endpoint
-- **POST `/hallucination-check`**
-- Validates outgoing OpenAI chat completion responses to detect hallucinations using Guardrails AI's GroundedAIHallucination validator.
-
-#### What does guardrail server respond with?
-- `null` - Guardrails passed, no hallucination detected in output.
-- `HTTP 400/500` - Guardrails failed with error details for output.
-
-### Competitor Mention Detection Endpoint
-- **POST `/competitor-check`**
-- Validates outgoing OpenAI chat completion responses to detect mentions of competitors using Guardrails AI. Configured with a predefined list of competitor names.
-
-#### What does guardrail server respond with?
-- `null` - Guardrails passed, no competitor mention detected in output.
-- `HTTP 400/500` - Guardrails failed with error details for output.
 
 ## How to build the docker image?
 
@@ -167,15 +142,6 @@ Web content sanitization endpoint for validating and potentially transforming in
 
 ### POST /pii-detection
 PII detection endpoint for detecting Personally Identifiable Information in incoming requests using Guardrails AI.
-
-### POST /nsfw-filtering-guardrails-ai
-NSFW filtering endpoint for validating outgoing OpenAI chat completion responses using Guardrails AI.
-
-### POST /hallucination-check
-Hallucination detection endpoint for validating outgoing OpenAI chat completion responses.
-
-### POST /competitor-check
-Competitor mention detection endpoint for validating outgoing OpenAI chat completion responses.
 
 **Request Body:**
 ```json
@@ -584,64 +550,6 @@ curl -X POST "http://localhost:8000/web-sanitization" \
   }'
 ```
 
-### NSFW Filtering using Guardrails AI (Success)
-```bash
-curl -X POST "http://localhost:8000/nsfw-filtering-guardrails-ai" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "Hello"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "config": {},
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "environment": "production"
-      }
-    }
-  }'
-```
-
-### NSFW Filtering using Guardrails AI (With Content Filtering)
-```bash
-curl -X POST "http://localhost:8000/nsfw-filtering-guardrails-ai" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "Tell me what word does we usually use for breasts?"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "config": {},
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "environment": "production"
-      }
-    }
-  }'
-```
-
 ### PII Detection using Guardrails AI (Success)
 ```bash
 curl -X POST "http://localhost:8000/pii-detection" \
@@ -706,214 +614,6 @@ curl -X POST "http://localhost:8000/pii-detection" \
   }'
 ```
 
-### Hallucination Detection using Guardrails AI (Success)
-```bash
-curl -X POST "http://localhost:8000/hallucination-check" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "What is the capital of France?"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "responseBody": {
-      "id": "chatcmpl-123",
-      "object": "chat.completion",
-      "created": 1677652288,
-      "model": "gpt-3.5-turbo",
-      "choices": [
-        {
-          "index": 0,
-          "message": {
-            "role": "assistant",
-            "content": "The capital of France is Paris."
-          },
-          "finish_reason": "stop"
-        }
-      ],
-      "usage": {
-        "prompt_tokens": 1,
-        "completion_tokens": 10,
-        "total_tokens": 11
-      }
-    },
-    "config": {
-      "check_hallucination": true
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "environment": "production"
-      }
-    }
-  }'
-```
-
-### Hallucination Detection using Guardrails AI (Failure - Potential Hallucination)
-```bash
-curl -X POST "http://localhost:8000/hallucination-check" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "What is the latest iPhone model?"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "responseBody": {
-      "id": "chatcmpl-123",
-      "object": "chat.completion",
-      "created": 1677652288,
-      "model": "gpt-3.5-turbo",
-      "choices": [
-        {
-          "index": 0,
-          "message": {
-            "role": "assistant",
-            "content": "There is no latest iPhone model."
-          },
-          "finish_reason": "stop"
-        }
-      ],
-      "usage": {
-        "prompt_tokens": 1,
-        "completion_tokens": 10,
-        "total_tokens": 11
-      }
-    },
-    "config": {
-      "check_hallucination": true
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "environment": "production"
-      }
-    }
-  }'
-```
-
-### Competitor Check using Guardrails AI (Success)
-```bash
-curl -X POST "http://localhost:8000/competitor-check" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "What are the benefits of exercise?"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "responseBody": {
-      "id": "chatcmpl-123",
-      "object": "chat.completion",
-      "created": 1677652288,
-      "model": "gpt-3.5-turbo",
-      "choices": [
-        {
-          "index": 0,
-          "message": {
-            "role": "assistant",
-            "content": "Exercise has many health benefits including improved cardiovascular health, stronger muscles, better mood, and increased energy levels."
-          },
-          "finish_reason": "stop"
-        }
-      ],
-      "usage": {
-        "prompt_tokens": 1,
-        "completion_tokens": 10,
-        "total_tokens": 11
-      }
-    },
-    "config": {
-      "check_competitors": true
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "environment": "production"
-      }
-    }
-  }'
-```
-
-### Competitor Check using Guardrails AI (Failure - Competitor Mentioned)
-```bash
-curl -X POST "http://localhost:8000/competitor-check" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "What is the best smartphone brand?"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "responseBody": {
-      "id": "chatcmpl-123",
-      "object": "chat.completion",
-      "created": 1677652288,
-      "model": "gpt-3.5-turbo",
-      "choices": [
-        {
-          "index": 0,
-          "message": {
-            "role": "assistant",
-            "content": "Apple and Samsung are considered the top smartphone brands in the market."
-          },
-          "finish_reason": "stop"
-        }
-      ],
-      "usage": {
-        "prompt_tokens": 1,
-        "completion_tokens": 10,
-        "total_tokens": 11
-      }
-    },
-    "config": {
-      "check_competitors": true
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "environment": "production"
-      }
-    }
-  }'
-```
-
 
 ## Technology Stack
 
@@ -936,29 +636,6 @@ The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/
 The PII detection endpoint uses Guardrails AI to identify the presence of Personally Identifiable Information (PII) in incoming messages. Unlike the Presidio-based redaction endpoint, this endpoint only detects and reports PII without modifying the content. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)  
 The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/guardrails/detect_pii)
 
-### NSFW Filtering with Guardrails AI
-The NSFW filtering (Guardrails AI) endpoint uses the NSFWText validator from Guardrails AI to detect and reject inappropriate content in outgoing responses. This validator supports configurable thresholds (default: 0.8) and sentence-level validation for more granular control. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)  
-The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/guardrails/nsfw_text)
-
-### Hallucination Detection with Guardrails AI
-The hallucination detection endpoint uses Guardrails AI's GroundedAIHallucination validator to identify potential hallucinations in AI-generated responses. This helps ensure that outputs are grounded and factually accurate. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)  
-The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/groundedai/grounded_ai_hallucination)
-
-### Competitor Mention Detection with Guardrails AI
-The competitor mention detection endpoint uses Guardrails AI to identify and reject responses that mention competitors. This is useful for compliance and brand safety in AI-generated outputs. The implementation includes a predefined list of competitor names. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)  
-The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/guardrails/competitor_check)
-
-## Dependencies
-
-The application requires the following key dependencies:
-- `openai==1.94.0` - OpenAI API client
-- `presidio-analyzer` and `presidio-anonymizer` - PII detection and redaction
-- `fastapi` and `uvicorn` - Web framework and ASGI server
-- `pydantic` - Data validation
-- `torch` and `transformers` - Machine learning models for NSFW filtering
-- `guardrails-ai` and `guardrails-ai[api]` - Guardrails AI framework and API support
-- `guardrails_grhub_web_sanitization` - Web sanitization validator for Guardrails AI
-
 ## Customization
 
 The modular architecture makes it easy to customize the guardrail logic:
@@ -968,9 +645,6 @@ The modular architecture makes it easy to customize the guardrail logic:
 - **NSFW Filtering (Local)**: Modify `guardrail/nsfw_filtering_local_eval.py` to customize content filtering thresholds and rules
 - **NSFW Filtering (Guardrails AI)**: Modify `guardrail/nsfw_filtering_guardrails_ai.py` to customize NSFW filtering using Guardrails AI
 - **Drug Mention Detection**: Modify `guardrail/drug_mention_guardrails_ai.py` to customize drug mention detection rules
-- **Web Sanitization**: Modify `guardrail/web_sanitization_guardrails_ai.py` to customize web sanitization rules
-- **Hallucination Check**: Modify `guardrail/hallucination_check_guardrails_ai.py` to customize hallucination detection rules
-- **Competitor Check**: Modify `guardrail/competitor_check_guardrails_ai.py` to customize competitor mention detection rules
 - **Request/Response Models**: Modify `entities.py` to add new fields or validation rules
 
 Replace the example guardrail logic in the respective files with your own implementation. The NSFW filtering uses the Unitary toxic classification model with configurable thresholds for toxicity, sexual content, and obscenity detection.
@@ -981,18 +655,6 @@ Replace the example guardrail logic in the respective files with your own implem
 - **Thresholds**: 0.2 for toxicity, sexual_explicit, and obscene content
 - **Model**: Unitary unbiased-toxic-roberta
 
-### NSFW Filtering (Guardrails AI)
-- **Threshold**: 0.8 (configurable)
-- **Validation Method**: Sentence-level validation
-- **Validator**: NSFWText from Guardrails Hub
-
-### Competitor Check
-- **Predefined Competitors**: Apple, Samsung, Xiaomi, Poco, Realme, OnePlus, Vivo, Oppo, Huawei, Lenovo, Dell, HP, Toshiba, Sony, LG
-- **Validator**: CompetitorCheck from Guardrails Hub
-
-### Hallucination Detection
-- **Quantitative Mode**: Disabled (quant=False)
-- **Validator**: GroundedAIHallucination from Guardrails Hub
 
 ## Adding New Endpoints
 
