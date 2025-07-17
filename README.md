@@ -14,13 +14,13 @@ The application follows a modular architecture with separate modules for differe
   - **`nsfw_filtering_guardrails_ai.py`**: NSFW content filtering using Guardrails AI
   - **`drug_mention_guardrails_ai.py`**: Drug mention detection using Guardrails AI
   - **`web_sanitization_guardrails_ai.py`**: Web content sanitization using Guardrails AI
-  - **`hallucination_check_guardrails_ai.py`**: Hallucination detection using Guardrails AI (not currently exposed)
-  - **`competitor_check_guardrails_ai.py`**: Competitor mention detection using Guardrails AI (not currently exposed)
+  - **`hallucination_check_guardrails_ai.py`**: Hallucination detection using Guardrails AI
+  - **`competitor_check_guardrails_ai.py`**: Competitor mention detection using Guardrails AI
 - **`entities.py`**: Pydantic models for request/response validation
 
 ## Currently Exposed Endpoints
 
-The Guardrail Server currently exposes four main endpoints for validation:
+The Guardrail Server currently exposes eight main endpoints for validation:
 
 ### PII Redaction Endpoint
 - **POST `/pii-redaction`**
@@ -31,7 +31,7 @@ The Guardrail Server currently exposes four main endpoints for validation:
 - `ChatCompletionCreateParams` - Content was transformed, returns the modified request with PII redacted.
 - `HTTP 400/500` - Guardrails failed with error details for input.
 
-### NSFW Filtering Endpoint
+### NSFW Filtering Endpoint (Local Model)
 - **POST `/nsfw-filtering`**
 - Validates and optionally transforms outgoing OpenAI chat completion responses to filter out NSFW content. Uses the Unitary toxic classification model to detect toxic, sexually explicit, and obscene content.
 
@@ -41,18 +41,18 @@ The Guardrail Server currently exposes four main endpoints for validation:
 
 ### Drug Mention Detection Endpoint
 - **POST `/drug-mention`**
-- Validates and optionally transforms incoming OpenAI chat completion requests before they are processed. Uses Guardrails AI to detect and reject responses that mention drugs.
+- Validates outgoing OpenAI chat completion responses to detect and reject responses that mention drugs. Uses Guardrails AI to detect drug-related content.
 
 #### What does guardrail server respond with?
-- `null` - Guardrails passed, no transformation needed for input.
-- `HTTP 400/500` - Guardrails failed with error details for input.
+- `null` - Guardrails passed, no drug mentions detected in output.
+- `HTTP 400/500` - Guardrails failed with error details for output.
 
 ### Web Sanitization Endpoint
 - **POST `/web-sanitization`**
-- Validates and optionally transforms incoming OpenAI chat completion requests before they are processed. Uses Guardrails AI to detect and reject responses that contain malicious content.
+- Validates incoming OpenAI chat completion requests before they are processed. Uses Guardrails AI to detect and reject requests that contain malicious content.
 
 #### What does guardrail server respond with?
-- `null` - Guardrails passed, no transformation needed for input.
+- `null` - Guardrails passed, no malicious content detected in input.
 - `HTTP 400/500` - Guardrails failed with error details for input.
 
 ### PII Detection (Guardrails AI) Endpoint
@@ -62,6 +62,14 @@ The Guardrail Server currently exposes four main endpoints for validation:
 #### What does guardrail server respond with?
 - `null` - Guardrails passed, no PII detected in input.
 - `HTTP 400/500` - Guardrails failed with error details for input.
+
+### NSFW Filtering (Guardrails AI) Endpoint
+- **POST `/nsfw-filtering-guardrails-ai`**
+- Validates outgoing OpenAI chat completion responses to filter out NSFW content. Uses Guardrails AI's NSFWText validator with configurable thresholds (default: 0.8) and sentence-level validation.
+
+#### What does guardrail server respond with?
+- `null` - Guardrails passed, no NSFW content detected in output.
+- `HTTP 400/500` - Guardrails failed with error details for output.
 
 ### Hallucination Detection Endpoint
 - **POST `/hallucination-check`**
@@ -73,18 +81,10 @@ The Guardrail Server currently exposes four main endpoints for validation:
 
 ### Competitor Mention Detection Endpoint
 - **POST `/competitor-check`**
-- Validates outgoing OpenAI chat completion responses to detect mentions of competitors using Guardrails AI.
+- Validates outgoing OpenAI chat completion responses to detect mentions of competitors using Guardrails AI. Configured with a predefined list of competitor names.
 
 #### What does guardrail server respond with?
 - `null` - Guardrails passed, no competitor mention detected in output.
-- `HTTP 400/500` - Guardrails failed with error details for output.
-
-### NSFW Filtering (Guardrails AI) Endpoint
-- **POST `/nsfw-filtering-guardrails-ai`**
-- Validates and optionally transforms outgoing OpenAI chat completion responses to filter out NSFW content. Uses Guardrails AI's NSFWText validator to detect and reject inappropriate content.
-
-#### What does guardrail server respond with?
-- `null` - Guardrails passed, no transformation needed for output.
 - `HTTP 400/500` - Guardrails failed with error details for output.
 
 ## How to build the docker image?
@@ -164,6 +164,18 @@ Drug mention detection endpoint for rejecting responses that mention drugs.
 
 ### POST /web-sanitization
 Web content sanitization endpoint for validating and potentially transforming incoming OpenAI chat completion requests to remove malicious content.
+
+### POST /pii-detection
+PII detection endpoint for detecting Personally Identifiable Information in incoming requests using Guardrails AI.
+
+### POST /nsfw-filtering-guardrails-ai
+NSFW filtering endpoint for validating outgoing OpenAI chat completion responses using Guardrails AI.
+
+### POST /hallucination-check
+Hallucination detection endpoint for validating outgoing OpenAI chat completion responses.
+
+### POST /competitor-check
+Competitor mention detection endpoint for validating outgoing OpenAI chat completion responses.
 
 **Request Body:**
 ```json
@@ -602,8 +614,19 @@ The hallucination detection endpoint uses Guardrails AI's GroundedAIHallucinatio
 The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/groundedai/grounded_ai_hallucination)
 
 ### Competitor Mention Detection with Guardrails AI
-The competitor mention detection endpoint uses Guardrails AI to identify and reject responses that mention competitors. This is useful for compliance and brand safety in AI-generated outputs. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)  
+The competitor mention detection endpoint uses Guardrails AI to identify and reject responses that mention competitors. This is useful for compliance and brand safety in AI-generated outputs. The implementation includes a predefined list of competitor names. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)  
 The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/guardrails/competitor_check)
+
+## Dependencies
+
+The application requires the following key dependencies:
+- `openai==1.94.0` - OpenAI API client
+- `presidio-analyzer` and `presidio-anonymizer` - PII detection and redaction
+- `fastapi` and `uvicorn` - Web framework and ASGI server
+- `pydantic` - Data validation
+- `torch` and `transformers` - Machine learning models for NSFW filtering
+- `guardrails-ai` and `guardrails-ai[api]` - Guardrails AI framework and API support
+- `guardrails_grhub_web_sanitization` - Web sanitization validator for Guardrails AI
 
 ## Customization
 
@@ -621,18 +644,30 @@ The modular architecture makes it easy to customize the guardrail logic:
 
 Replace the example guardrail logic in the respective files with your own implementation. The NSFW filtering uses the Unitary toxic classification model with configurable thresholds for toxicity, sexual content, and obscenity detection.
 
+## Configuration Details
+
+### NSFW Filtering (Local Model)
+- **Thresholds**: 0.2 for toxicity, sexual_explicit, and obscene content
+- **Model**: Unitary unbiased-toxic-roberta
+
+### NSFW Filtering (Guardrails AI)
+- **Threshold**: 0.8 (configurable)
+- **Validation Method**: Sentence-level validation
+- **Validator**: NSFWText from Guardrails Hub
+
+### Competitor Check
+- **Predefined Competitors**: Apple, Samsung, Xiaomi, Poco, Realme, OnePlus, Vivo, Oppo, Huawei, Lenovo, Dell, HP, Toshiba, Sony, LG
+- **Validator**: CompetitorCheck from Guardrails Hub
+
+### Hallucination Detection
+- **Quantitative Mode**: Disabled (quant=False)
+- **Validator**: GroundedAIHallucination from Guardrails Hub
+
 ## Adding New Endpoints
 
-To expose the available but unexposed guardrail implementations as endpoints, add the following routes to `main.py`:
+All available guardrail implementations are already exposed as endpoints in the current version. To add new guardrail functionality:
 
-```python
-from guardrail.pii_detection_guardrails_ai import pii_detection_guardrails_ai
-from guardrail.nsfw_filtering_guardrails_ai import nsfw_filtering_guardrails_ai
-from guardrail.hallucination_check_guardrails_ai import hallucination_check
-from guardrail.competitor_check_guardrails_ai import competitor_check
-
-app.add_api_route("/pii-detection", endpoint=pii_detection_guardrails_ai, methods=["POST"])
-app.add_api_route("/nsfw-filtering-ai", endpoint=nsfw_filtering_guardrails_ai, methods=["POST"])
-app.add_api_route("/hallucination-check", endpoint=hallucination_check, methods=["POST"])
-app.add_api_route("/competitor-check", endpoint=competitor_check, methods=["POST"])
-```
+1. Create a new guardrail implementation file in the `guardrail/` directory
+2. Follow the existing pattern for input or output validation
+3. Add the route to `main.py` using `app.add_api_route()`
+4. Update this README with the new endpoint documentation
