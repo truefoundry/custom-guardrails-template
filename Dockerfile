@@ -21,16 +21,8 @@ COPY . .
 # Expose FastAPI port
 EXPOSE 8000
 
-# Define build argument for Guardrails token
-ARG GUARDRAILS_TOKEN
-ENV GUARDRAILS_TOKEN=$GUARDRAILS_TOKEN
+
+RUN python setup.py
 
 # Default command to run app
-CMD guardrails configure --disable-metrics --disable-remote-inferencing --token $GUARDRAILS_TOKEN && \
-    guardrails hub install hub://guardrails/competitor_check && \
-    guardrails hub install hub://guardrails/detect_pii && \
-    guardrails hub install hub://groundedai/grounded_ai_hallucination && \
-    guardrails hub install hub://cartesia/mentions_drugs && \
-    guardrails hub install hub://guardrails/web_sanitization && \
-    guardrails hub install hub://guardrails/nsfw_text && \
-    uvicorn main:app --host 0.0.0.0 --port 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
