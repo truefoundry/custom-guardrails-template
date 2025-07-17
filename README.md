@@ -414,7 +414,7 @@ curl -X POST "http://localhost:8000/nsfw-filtering" \
   }'
 ```
 
-### Drug Mention Detection (Success)
+### Drug Mention Detection using Guardrails AI (Success)
 ```bash
 curl -X POST "http://localhost:8000/drug-mention" \
   -H "Content-Type: application/json" \
@@ -466,7 +466,7 @@ curl -X POST "http://localhost:8000/drug-mention" \
   }'
 ```
 
-### Drug Mention Detection (Failure - Drug Mentioned)
+### Drug Mention Detection using Guardrails AI (Failure - Drug Mentioned)
 ```bash
 curl -X POST "http://localhost:8000/drug-mention" \
   -H "Content-Type: application/json" \
@@ -518,7 +518,7 @@ curl -X POST "http://localhost:8000/drug-mention" \
   }'
 ```
 
-### Web Sanitization (Success)
+### Web Sanitization using Guardrails AI (Success)
 ```bash
 curl -X POST "http://localhost:8000/web-sanitization" \
   -H "Content-Type: application/json" \
@@ -551,7 +551,7 @@ curl -X POST "http://localhost:8000/web-sanitization" \
   }'
 ```
 
-### Web Sanitization (Failure - Malicious Content)
+### Web Sanitization using Guardrails AI (Failure - Malicious Content)
 ```bash
 curl -X POST "http://localhost:8000/web-sanitization" \
   -H "Content-Type: application/json" \
@@ -583,6 +583,337 @@ curl -X POST "http://localhost:8000/web-sanitization" \
     }
   }'
 ```
+
+### NSFW Filtering using Guardrails AI (Success)
+```bash
+curl -X POST "http://localhost:8000/nsfw-filtering-guardrails-ai" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Hello"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "config": {},
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "environment": "production"
+      }
+    }
+  }'
+```
+
+### NSFW Filtering using Guardrails AI (With Content Filtering)
+```bash
+curl -X POST "http://localhost:8000/nsfw-filtering-guardrails-ai" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Tell me what word does we usually use for breasts?"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "config": {},
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "environment": "production"
+      }
+    }
+  }'
+```
+
+### PII Detection using Guardrails AI (Success)
+```bash
+curl -X POST "http://localhost:8000/pii-detection" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Hello, tell me a story."
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "config": {
+      "check_content": true
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "ip_address": "192.168.1.1",
+        "session_id": "abc123"
+      }
+    }
+  }'
+```
+
+### PII Detection using Guardrails AI (Failure - PII Detected)
+```bash
+curl -X POST "http://localhost:8000/pii-detection" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "My name is John Doe and my email is john.doe@example.com"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "config": {
+      "check_content": true
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "ip_address": "192.168.1.1",
+        "session_id": "abc123"
+      }
+    }
+  }'
+```
+
+### Hallucination Detection using Guardrails AI (Success)
+```bash
+curl -X POST "http://localhost:8000/hallucination-check" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "What is the capital of France?"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "responseBody": {
+      "id": "chatcmpl-123",
+      "object": "chat.completion",
+      "created": 1677652288,
+      "model": "gpt-3.5-turbo",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "The capital of France is Paris."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1,
+        "completion_tokens": 10,
+        "total_tokens": 11
+      }
+    },
+    "config": {
+      "check_hallucination": true
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "environment": "production"
+      }
+    }
+  }'
+```
+
+### Hallucination Detection using Guardrails AI (Failure - Potential Hallucination)
+```bash
+curl -X POST "http://localhost:8000/hallucination-check" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "What is the latest iPhone model?"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "responseBody": {
+      "id": "chatcmpl-123",
+      "object": "chat.completion",
+      "created": 1677652288,
+      "model": "gpt-3.5-turbo",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "There is no latest iPhone model."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1,
+        "completion_tokens": 10,
+        "total_tokens": 11
+      }
+    },
+    "config": {
+      "check_hallucination": true
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "environment": "production"
+      }
+    }
+  }'
+```
+
+### Competitor Check using Guardrails AI (Success)
+```bash
+curl -X POST "http://localhost:8000/competitor-check" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "What are the benefits of exercise?"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "responseBody": {
+      "id": "chatcmpl-123",
+      "object": "chat.completion",
+      "created": 1677652288,
+      "model": "gpt-3.5-turbo",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Exercise has many health benefits including improved cardiovascular health, stronger muscles, better mood, and increased energy levels."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1,
+        "completion_tokens": 10,
+        "total_tokens": 11
+      }
+    },
+    "config": {
+      "check_competitors": true
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "environment": "production"
+      }
+    }
+  }'
+```
+
+### Competitor Check using Guardrails AI (Failure - Competitor Mentioned)
+```bash
+curl -X POST "http://localhost:8000/competitor-check" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "What is the best smartphone brand?"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "responseBody": {
+      "id": "chatcmpl-123",
+      "object": "chat.completion",
+      "created": 1677652288,
+      "model": "gpt-3.5-turbo",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Apple and Samsung are considered the top smartphone brands in the market."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1,
+        "completion_tokens": 10,
+        "total_tokens": 11
+      }
+    },
+    "config": {
+      "check_competitors": true
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      },
+      "metadata": {
+        "environment": "production"
+      }
+    }
+  }'
+```
+
 
 ## Technology Stack
 
