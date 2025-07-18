@@ -6,3 +6,5 @@ uvicorn
 pydantic
 guardrails-ai
 guardrails-ai[api]
+torch
+transformers
