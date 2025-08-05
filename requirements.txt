@@ -8,3 +8,4 @@ guardrails-ai
 guardrails-ai[api]
 torch
 transformers
+requests

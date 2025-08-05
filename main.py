@@ -9,6 +9,9 @@ from guardrail.nsfw_filtering_local_eval import nsfw_filtering
 from guardrail.drug_mention_guardrails_ai import drug_mention
 from guardrail.web_sanitization_guardrails_ai import web_sanitization
 from guardrail.lasso_classification_guardrail import lasso_classification_guardrail
+from guardrail.promptfoo_guard_check import guard_check_endpoint
+from guardrail.promptfoo_pii_detection import pii_detection_endpoint
+from guardrail.promptfoo_harm_detection import harm_detection_endpoint
 
 # Create FastAPI app instance
 app = FastAPI(
@@ -34,6 +37,12 @@ app.add_api_route("/web-sanitization",endpoint=web_sanitization,methods=["POST"]
 app.add_api_route("/pii-detection",endpoint=pii_detection_guardrails_ai,methods=["POST"])
 
 app.add_api_route("/lasso-classification",endpoint=lasso_classification_guardrail,methods=["POST"])
+
+app.add_api_route("/promptfoo/guard-check", endpoint=guard_check_endpoint, methods=["POST"])
+
+app.add_api_route("/promptfoo/pii-detection", endpoint=pii_detection_endpoint, methods=["POST"])
+
+app.add_api_route("/promptfoo/harm-detection", endpoint=harm_detection_endpoint, methods=["POST"])
 
 
 
