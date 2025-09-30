@@ -1,13 +1,6 @@
 from fastapi import FastAPI, HTTPException
-from setup import setup_guardrails
-
-setup_guardrails()
-
-from guardrail.pii_detection_guardrails_ai import pii_detection_guardrails_ai
 from guardrail.pii_redaction_presidio import process_input_guardrail
 from guardrail.nsfw_filtering_local_eval import nsfw_filtering
-from guardrail.drug_mention_guardrails_ai import drug_mention
-from guardrail.web_sanitization_guardrails_ai import web_sanitization
 
 # Create FastAPI app instance
 app = FastAPI(
@@ -26,11 +19,6 @@ app.add_api_route( "/pii-redaction", endpoint=process_input_guardrail, methods=[
 
 app.add_api_route("/nsfw-filtering",endpoint=nsfw_filtering,methods=["POST"])
 
-app.add_api_route("/drug-mention",endpoint=drug_mention,methods=["POST"])
-
-app.add_api_route("/web-sanitization",endpoint=web_sanitization,methods=["POST"])
-
-app.add_api_route("/pii-detection",endpoint=pii_detection_guardrails_ai,methods=["POST"])
 
 
 
