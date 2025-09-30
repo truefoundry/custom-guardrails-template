@@ -17,7 +17,7 @@ The application follows a modular architecture with separate modules for differe
 
 ## Currently Exposed Endpoints
 
-The Guardrail Server currently exposes eight main endpoints for validation:
+The Guardrail Server currently exposes two main endpoints for validation:
 
 ### PII Redaction Endpoint
 - **POST `/pii-redaction`**
@@ -36,29 +36,6 @@ The Guardrail Server currently exposes eight main endpoints for validation:
 - `null` - Guardrails passed, no transformation needed for output.
 - `HTTP 400/500` - Guardrails failed with error details for output.
 
-### Drug Mention Detection Endpoint
-- **POST `/drug-mention`**
-- Validates outgoing OpenAI chat completion responses to detect and reject responses that mention drugs. Uses Guardrails AI to detect drug-related content.
-
-#### What does guardrail server respond with?
-- `null` - Guardrails passed, no drug mentions detected in output.
-- `HTTP 400/500` - Guardrails failed with error details for output.
-
-### Web Sanitization Endpoint
-- **POST `/web-sanitization`**
-- Validates incoming OpenAI chat completion requests before they are processed. Uses Guardrails AI to detect and reject requests that contain malicious content.
-
-#### What does guardrail server respond with?
-- `null` - Guardrails passed, no malicious content detected in input.
-- `HTTP 400/500` - Guardrails failed with error details for input.
-
-### PII Detection (Guardrails AI) Endpoint
-- **POST `/pii-detection`**
-- Validates incoming OpenAI chat completion requests to detect the presence of Personally Identifiable Information (PII) using Guardrails AI. Does not redact, only detects and reports PII.
-
-#### What does guardrail server respond with?
-- `null` - Guardrails passed, no PII detected in input.
-- `HTTP 400/500` - Guardrails failed with error details for input.
 
 
 
@@ -134,14 +111,6 @@ PII redaction endpoint for validating and potentially transforming incoming Open
 ### POST /nsfw-filtering
 NSFW filtering endpoint for validating and potentially transforming outgoing OpenAI chat completion responses to filter inappropriate content.
 
-### POST /drug-mention
-Drug mention detection endpoint for rejecting responses that mention drugs.
-
-### POST /web-sanitization
-Web content sanitization endpoint for validating and potentially transforming incoming OpenAI chat completion requests to remove malicious content.
-
-### POST /pii-detection
-PII detection endpoint for detecting Personally Identifiable Information in incoming requests using Guardrails AI.
 
 **Request Body:**
 ```json
@@ -175,61 +144,6 @@ PII detection endpoint for detecting Personally Identifiable Information in inco
 }
 ```
 
-### POST /process-message
-Output processing endpoint for validating and potentially transforming OpenAI chat completion responses.
-
-**Request Body:**
-```json
-{
-  "requestBody": {
-    "messages": [
-      {
-        "role": "user",
-        "content": "Hello"
-      }
-    ],
-    "model": "gpt-3.5-turbo"
-  },
-  "responseBody": {
-    "id": "chatcmpl-123",
-    "object": "chat.completion",
-    "created": 1677652288,
-    "model": "gpt-3.5-turbo",
-    "choices": [
-      {
-        "index": 0,
-        "message": {
-          "role": "assistant",
-          "content": "Hello! How can I assist you today?"
-        },
-        "finish_reason": "stop"
-      }
-    ],
-    "usage": {
-      "prompt_tokens": 1,
-      "completion_tokens": 10,
-      "total_tokens": 11
-    }
-  },
-  "config": {
-    "check_sensitive_data": true,
-    "transform_output": false,
-    "filter_by_context": true
-  },
-  "context": {
-    "user": {
-      "subjectId": "123",
-      "subjectType": "user",
-      "subjectSlug": "john_doe@truefoundry.com",
-      "subjectDisplayName": "John Doe"
-    },
-    "metadata": {
-      "ip_address": "192.168.1.1",
-      "session_id": "abc123"
-    }
-  }
-}
-```
 
 ## Example Usage
 
@@ -380,239 +294,8 @@ curl -X POST "http://localhost:8000/nsfw-filtering" \
   }'
 ```
 
-### Drug Mention Detection using Guardrails AI (Success)
-```bash
-curl -X POST "http://localhost:8000/drug-mention" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "What are the health benefits of exercise?"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "responseBody": {
-      "id": "chatcmpl-123",
-      "object": "chat.completion",
-      "created": 1677652288,
-      "model": "gpt-3.5-turbo",
-      "choices": [
-        {
-          "index": 0,
-          "message": {
-            "role": "assistant",
-            "content": "Exercise has many health benefits including improved cardiovascular health, stronger muscles, better mood, and increased energy levels."
-          },
-          "finish_reason": "stop"
-        }
-      ],
-      "usage": {
-        "prompt_tokens": 1,
-        "completion_tokens": 10,
-        "total_tokens": 11
-      }
-    },
-    "config": {
-      "check_drug_mentions": true
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "environment": "production"
-      }
-    }
-  }'
-```
 
-### Drug Mention Detection using Guardrails AI (Failure - Drug Mentioned)
-```bash
-curl -X POST "http://localhost:8000/drug-mention" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "Tell me about cocaine"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "responseBody": {
-      "id": "chatcmpl-123",
-      "object": "chat.completion",
-      "created": 1677652288,
-      "model": "gpt-3.5-turbo",
-      "choices": [
-        {
-          "index": 0,
-          "message": {
-            "role": "assistant",
-            "content": "Cocaine is a powerful stimulant drug that affects the central nervous system."
-          },
-          "finish_reason": "stop"
-        }
-      ],
-      "usage": {
-        "prompt_tokens": 1,
-        "completion_tokens": 10,
-        "total_tokens": 11
-      }
-    },
-    "config": {
-      "check_drug_mentions": true
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "environment": "production"
-      }
-    }
-  }'
-```
 
-### Web Sanitization using Guardrails AI (Success)
-```bash
-curl -X POST "http://localhost:8000/web-sanitization" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "Hello, how are you today?"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "config": {
-      "check_content": true,
-      "transform_input": false
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "ip_address": "192.168.1.1",
-        "session_id": "abc123"
-      }
-    }
-  }'
-```
-
-### Web Sanitization using Guardrails AI (Failure - Malicious Content)
-```bash
-curl -X POST "http://localhost:8000/web-sanitization" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "<script>alert(\"XSS attack\")</script>Hello, how are you?"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "config": {
-      "check_content": true,
-      "transform_input": true
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "ip_address": "192.168.1.1",
-        "session_id": "abc123"
-      }
-    }
-  }'
-```
-
-### PII Detection using Guardrails AI (Success)
-```bash
-curl -X POST "http://localhost:8000/pii-detection" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "Hello, tell me a story."
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "config": {
-      "check_content": true
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "ip_address": "192.168.1.1",
-        "session_id": "abc123"
-      }
-    }
-  }'
-```
-
-### PII Detection using Guardrails AI (Failure - PII Detected)
-```bash
-curl -X POST "http://localhost:8000/pii-detection" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestBody": {
-      "messages": [
-        {
-          "role": "user",
-          "content": "My name is John Doe and my email is john.doe@example.com"
-        }
-      ],
-      "model": "gpt-3.5-turbo"
-    },
-    "config": {
-      "check_content": true
-    },
-    "context": {
-      "user": {
-        "subjectId": "123",
-        "subjectType": "user",
-        "subjectSlug": "john_doe@truefoundry.com",
-        "subjectDisplayName": "John Doe"
-      },
-      "metadata": {
-        "ip_address": "192.168.1.1",
-        "session_id": "abc123"
-      }
-    }
-  }'
-```
 
 
 ## Technology Stack
@@ -623,28 +306,13 @@ The PII redaction endpoint uses Presidio to detect and remove Personally Identif
 ### NSFW Filtering with Unitary Toxic Classification Model
 The NSFW filtering endpoint can be used to validate and optionally transform the response from the LLM before returning it to the client. If the output is transformed (e.g., content is modified or formatted), the endpoint will return the modified response body. The NSFW filtering uses the Unitary toxic classification model with configurable thresholds for toxicity, sexual content, and obscenity detection. Link to the model: [Unitary Toxic Classification Model](https://huggingface.co/unitary/unbiased-toxic-roberta)
 
-### Drug Mention Detection with Guardrails AI
-The drug mention detection endpoint uses Guardrails AI to detect and reject responses that mention drugs. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)
-The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/cartesia/mentions_drugs)
-
-### Web Sanitization with Guardrails AI
-The web sanitization endpoint uses Guardrails AI to detect and reject responses that contain malicious content. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)
-The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/guardrails/web_sanitization)
-
-
-### PII Detection with Guardrails AI
-The PII detection endpoint uses Guardrails AI to identify the presence of Personally Identifiable Information (PII) in incoming messages. Unlike the Presidio-based redaction endpoint, this endpoint only detects and reports PII without modifying the content. Link to the library: [Guardrails AI](https://github.com/guardrails-ai/guardrails)  
-The validator is available in the [Guardrails Hub](https://hub.guardrailsai.com/validator/guardrails/detect_pii)
 
 ## Customization
 
 The modular architecture makes it easy to customize the guardrail logic:
 
 - **PII Redaction**: Modify `guardrail/pii_redaction_presidio.py` to customize PII detection and redaction rules
-- **PII Detection (Guardrails AI)**: Modify `guardrail/pii_detection_guardrails_ai.py` to customize PII detection using Guardrails AI
 - **NSFW Filtering (Local)**: Modify `guardrail/nsfw_filtering_local_eval.py` to customize content filtering thresholds and rules
-- **NSFW Filtering (Guardrails AI)**: Modify `guardrail/nsfw_filtering_guardrails_ai.py` to customize NSFW filtering using Guardrails AI
-- **Drug Mention Detection**: Modify `guardrail/drug_mention_guardrails_ai.py` to customize drug mention detection rules
 - **Request/Response Models**: Modify `entities.py` to add new fields or validation rules
 
 Replace the example guardrail logic in the respective files with your own implementation. The NSFW filtering uses the Unitary toxic classification model with configurable thresholds for toxicity, sexual content, and obscenity detection.
@@ -656,9 +324,156 @@ Replace the example guardrail logic in the respective files with your own implem
 - **Model**: Unitary unbiased-toxic-roberta
 
 
+## Adding Guardrails AI
+
+This section provides comprehensive guidance on how to add new Guardrails AI validators to your guardrail server.
+
+### Prerequisites
+
+Before adding Guardrails AI validators, ensure you have:
+
+1. **Guardrails AI Token**: Obtain a token from [Guardrails AI](https://guardrailsai.com/)
+2. **Environment Setup**: Set the `GUARDRAILS_TOKEN` environment variable
+3. **Dependencies**: Ensure `guardrails-ai` and `guardrails-ai[api]` are installed
+
+### Setup Process
+
+To set up Guardrails AI, you need to define the following function in your `setup.py` file and ensure it is called before any other application logic (such as importing or running your FastAPI app):
+
+
+```python
+# setup.py handles the configuration
+def setup_guardrails():
+    subprocess.run([
+        "guardrails", "configure",
+        "--disable-metrics",
+        "--disable-remote-inferencing",
+        "--token", GUARDRAILS_TOKEN
+    ], check=True)
+
+    subprocess.run([
+        "guardrails", "hub", "install", "hub://guardrails/detect_pii"
+    ], check=True)
+
+```
+
+### Example Guardrails AI Validators
+
+This template includes example Guardrails AI validators to help you get started. You can use these as references when adding your own.
+
+| Validator         | Purpose                                         | Hub URL                                 | File                          |
+|-------------------|-------------------------------------------------|------------------------------------------|-------------------------------|
+| `DetectPII`       | Detects Personally Identifiable Information     | `hub://guardrails/detect_pii`           | `pii_detection_guardrails_ai.py` |
+| `MentionsDrugs`   | Detects drug mentions in content                | `hub://cartesia/mentions_drugs`         | `drug_mention_guardrails_ai.py`  |
+| `WebSanitization` | Sanitizes web content and detects malicious code| `hub://guardrails/web_sanitization`     | `web_sanitization_guardrails_ai.py` |
+
+Use these examples as a template for integrating additional Guardrails AI validators into your project.
+
+### Creating a New Guardrails AI Validator
+
+#### Step 1: Install the Validator
+
+Add the validator installation to `setup.py`:
+
+```python
+def setup_guardrails():
+    # ... existing setup code ...
+    
+    # Add your new validator
+    subprocess.run([
+        "guardrails", "hub", "install", "hub://your-org/your-validator"
+    ], check=True)
+```
+
+#### Step 2: Create the Implementation File
+
+Create a new file in the `guardrail/` directory following this pattern:
+
+**For Input Validation** (e.g., `guardrail/your_validator_guardrails_ai.py`):
+```python
+from typing import Optional
+from fastapi import HTTPException
+from guardrails import Guard
+from guardrails.hub import YourValidator  # Import your validator
+
+from entities import InputGuardrailRequest
+
+# Setup the Guard with the validator
+guard = Guard().use(YourValidator, on_fail="exception")
+
+def your_validator_function(request: InputGuardrailRequest) -> Optional[dict]:
+    """
+    Validate input using Guardrails AI validator.
+    
+    Args:
+        request: Input guardrail request containing messages to validate
+        
+    Returns:
+        None if validation passes, raises HTTPException if validation fails
+    """
+    try:
+        messages = request.requestBody.get("messages", [])
+        for message in messages:
+            if isinstance(message, dict) and message.get("content"):
+                guard.validate(message["content"])
+        return None
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+```
+
+**For Output Validation** (e.g., `guardrail/your_output_validator_guardrails_ai.py`):
+```python
+from typing import Optional
+from fastapi import HTTPException
+from guardrails import Guard
+from guardrails.hub import YourOutputValidator  # Import your validator
+
+from entities import OutputGuardrailRequest
+
+# Setup the Guard with the validator
+guard = Guard().use(YourOutputValidator, on_fail="exception")
+
+def your_output_validator_function(request: OutputGuardrailRequest) -> Optional[dict]:
+    """
+    Validate output using Guardrails AI validator.
+    
+    Args:
+        request: Output guardrail request containing response to validate
+        
+    Returns:
+        None if validation passes, raises HTTPException if validation fails
+    """
+    try:
+        for choice in request.responseBody.get("choices", []):
+            if "content" in choice.get("message", {}):
+                guard.validate(choice["message"]["content"])
+        return None
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+```
+
+#### Step 3: Add the Route
+
+Import and register your validator in `main.py`:
+
+```python
+# Add import
+from guardrail.your_validator_guardrails_ai import your_validator_function
+
+# Add route
+app.add_api_route("/your-endpoint", endpoint=your_validator_function, methods=["POST"])
+```
+
+### Best Practices
+
+1. **Error Handling**: Always wrap validator calls in try-catch blocks
+2. **HTTP Status Codes**: Use appropriate status codes (400 for validation failures, 500 for server errors)
+3. **Logging**: Consider adding logging for debugging and monitoring
+4. **Testing**: Test your validators with various inputs including edge cases
+
 ## Adding New Endpoints
 
-All available guardrail implementations are already exposed as endpoints in the current version. To add new guardrail functionality:
+Currently, only PII redaction and NSFW filtering endpoints are exposed. To add new guardrail functionality:
 
 1. Create a new guardrail implementation file in the `guardrail/` directory
 2. Follow the existing pattern for input or output validation

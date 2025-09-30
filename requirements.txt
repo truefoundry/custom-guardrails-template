@@ -4,7 +4,5 @@ presidio-anonymizer
 fastapi
 uvicorn
 pydantic
-guardrails-ai
-guardrails-ai[api]
 torch
 transformers
