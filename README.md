@@ -303,6 +303,225 @@ curl -X POST "http://localhost:8000/nsfw-filtering" \
 ### PII Redaction with Presidio
 The PII redaction endpoint uses Presidio to detect and remove Personally Identifiable Information (PII) from incoming messages. This ensures that sensitive information is anonymized before further processing. Link to the library: [Presidio](https://github.com/microsoft/presidio)
 
+#### Configuring Presidio Recognizers
+
+Presidio recognizers are configured via the `config` field in your request. The guardrail supports three configuration formats:
+
+##### 1. Using Preset Configurations
+
+Presets provide predefined sets of recognizers optimized for specific regions or use cases:
+
+| Preset | Description | Recognizers Included |
+|--------|-------------|---------------------|
+| `INDIAN` / `INDIA` | Indian PII entities | PAN, Aadhaar, Voter ID, Passport, Vehicle Registration |
+| `US` / `USA` | US PII entities | SSN, Passport, Driver License, ITIN, Bank Account, ABA Routing, Medical License |
+| `UK` | UK PII entities | NHS Number, National Insurance Number (NINO) |
+| `AUSTRALIAN` / `AU` / `AUSTRALIA` | Australian PII entities | ABN, ACN, TFN, Medicare |
+| `SINGAPORE` / `SG` | Singapore PII entities | FIN, UEN |
+| `EUROPEAN` / `EUROPE` / `EU` | European PII entities | Spanish NIF/NIE, Italian documents, Polish PESEL, Finnish ID, IBAN |
+| `FINANCIAL` | Financial identifiers | Credit Card, IBAN, Bank Account, Crypto Wallet |
+| `CONTACT` | Contact information | Email, Phone, IP Address, URL |
+| `STANDARD` | Essential recognizers | Financial + Contact + Date/Time |
+| `COMPREHENSIVE` / `ALL` | All available recognizers | All 35+ predefined recognizers |
+
+**Example using a preset:**
+```json
+{
+  "config": {
+    "transform_input": true,
+    "recognizers": "INDIAN"
+  }
+}
+```
+
+##### 2. Using Individual Recognizers
+
+You can specify individual recognizers by their exact names:
+
+**Example using specific recognizers:**
+```json
+{
+  "config": {
+    "transform_input": true,
+    "recognizers": ["EmailRecognizer", "PhoneRecognizer", "CreditCardRecognizer"]
+  }
+}
+```
+
+**Available Individual Recognizers:**
+
+| Category | Recognizers |
+|----------|------------|
+| **US** | `UsSsnRecognizer`, `UsPassportRecognizer`, `UsLicenseRecognizer`, `UsItinRecognizer`, `UsBankRecognizer`, `AbaRoutingRecognizer`, `MedicalLicenseRecognizer` |
+| **UK** | `NhsRecognizer`, `UkNinoRecognizer` |
+| **India** | `InPanRecognizer`, `InAadhaarRecognizer`, `InVehicleRegistrationRecognizer`, `InPassportRecognizer`, `InVoterRecognizer` |
+| **Australia** | `AuAbnRecognizer`, `AuAcnRecognizer`, `AuTfnRecognizer`, `AuMedicareRecognizer` |
+| **Singapore** | `SgFinRecognizer`, `SgUenRecognizer` |
+| **Europe** | `EsNifRecognizer`, `EsNieRecognizer`, `ItDriverLicenseRecognizer`, `ItFiscalCodeRecognizer`, `ItIdentityCardRecognizer`, `ItPassportRecognizer`, `ItVatCodeRecognizer`, `PlPeselRecognizer`, `FiPersonalIdentityCodeRecognizer` |
+| **Financial** | `CreditCardRecognizer`, `IbanRecognizer`, `CryptoRecognizer` |
+| **Contact** | `EmailRecognizer`, `PhoneRecognizer`, `IpRecognizer`, `UrlRecognizer` |
+| **Other** | `DateRecognizer`, `KrRrnRecognizer` |
+
+##### 3. Combining Presets and Recognizers
+
+You can mix presets with individual recognizers for flexible configuration:
+
+**Example combining preset with additional recognizers:**
+```json
+{
+  "config": {
+    "transform_input": true,
+    "recognizers": ["INDIAN", "EmailRecognizer", "CreditCardRecognizer"]
+  }
+}
+```
+
+**Example as comma-separated string:**
+```json
+{
+  "config": {
+    "transform_input": true,
+    "recognizers": "FINANCIAL, CONTACT, InAadhaarRecognizer"
+  }
+}
+```
+
+##### 4. Language Configuration
+
+You can specify the language for text analysis (default is `en`):
+
+```json
+{
+  "config": {
+    "transform_input": true,
+    "recognizers": "US",
+    "language": "en"
+  }
+}
+```
+
+Supported languages depend on the specific recognizers being used. Most recognizers work with English (`en`).
+
+##### Complete Configuration Examples
+
+**Example 1: Indian company protecting financial and contact info**
+```bash
+curl -X POST "http://localhost:8000/pii-redaction" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "My PAN is ABCDE1234F and email is john@example.com"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "config": {
+      "transform_input": true,
+      "recognizers": ["INDIAN", "CONTACT", "FINANCIAL"]
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      }
+    }
+  }'
+```
+
+**Example 2: US healthcare application with specific recognizers**
+```bash
+curl -X POST "http://localhost:8000/pii-redaction" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "SSN: 123-45-6789, Medical License: A123456"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "config": {
+      "transform_input": true,
+      "recognizers": ["UsSsnRecognizer", "MedicalLicenseRecognizer", "EmailRecognizer"]
+    },
+    "context": {
+      "user": {
+        "subjectId": "456",
+        "subjectType": "user",
+        "subjectSlug": "doctor@hospital.com",
+        "subjectDisplayName": "Dr. Smith"
+      }
+    }
+  }'
+```
+
+**Example 3: Global financial platform**
+```bash
+curl -X POST "http://localhost:8000/pii-redaction" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Credit card: 4532-1234-5678-9010, IBAN: GB82WEST12345698765432"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "config": {
+      "transform_input": true,
+      "recognizers": "FINANCIAL"
+    },
+    "context": {
+      "user": {
+        "subjectId": "789",
+        "subjectType": "user",
+        "subjectSlug": "user@bank.com",
+        "subjectDisplayName": "Banking User"
+      }
+    }
+  }'
+```
+
+**Example 4: Check only without transformation**
+```bash
+curl -X POST "http://localhost:8000/pii-redaction" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestBody": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Hello world"
+        }
+      ],
+      "model": "gpt-3.5-turbo"
+    },
+    "config": {
+      "transform_input": false,
+      "recognizers": "ALL"
+    },
+    "context": {
+      "user": {
+        "subjectId": "123",
+        "subjectType": "user",
+        "subjectSlug": "john_doe@truefoundry.com",
+        "subjectDisplayName": "John Doe"
+      }
+    }
+  }'
+```
+
+**Note**: If `transform_input` is `false`, the endpoint will not perform redaction even if PII is detected. Set it to `true` to enable PII redaction.
+
 ### NSFW Filtering with Unitary Toxic Classification Model
 The NSFW filtering endpoint can be used to validate and optionally transform the response from the LLM before returning it to the client. If the output is transformed (e.g., content is modified or formatted), the endpoint will return the modified response body. The NSFW filtering uses the Unitary toxic classification model with configurable thresholds for toxicity, sexual content, and obscenity detection. Link to the model: [Unitary Toxic Classification Model](https://huggingface.co/unitary/unbiased-toxic-roberta)
 
