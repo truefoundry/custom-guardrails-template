@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y curl bash g++ gcc && rm -rf /var/lib/ap
 
 # Copy requirements and install dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --upgrade pip && pip install uv && uv pip install -r requirements.txt
 
 # Copy application code 
 COPY . .
