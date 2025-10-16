@@ -3,6 +3,7 @@ from guardrail.pii_redaction_presidio import process_input_guardrail
 from guardrail.nsfw_filtering_local_eval import nsfw_filtering
 from presidio_entities import preload_presidio
 
+
 # Create FastAPI app instance
 app = FastAPI(
     title="Guardrail Server",
@@ -18,7 +19,7 @@ async def health_check():
 
 app.add_api_route( "/pii-redaction", endpoint=process_input_guardrail, methods=["POST"])
 
-app.add_api_route("/nsfw-filtering",endpoint=nsfw_filtering,methods=["POST"])
+# app.add_api_route("/nsfw-filtering",endpoint=nsfw_filtering,methods=["POST"])
 
 
 
@@ -35,5 +36,4 @@ async def global_exception_handler(request, exc):
 # Run the app using Uvicorn if this script is executed directly
 if __name__ == "__main__":
     import uvicorn
-    preload_presidio()
     uvicorn.run(app, host="0.0.0.0", port=8000) 

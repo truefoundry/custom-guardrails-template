@@ -23,5 +23,7 @@ COPY . .
 EXPOSE 8000
 
 
+RUN python presidio_entities.py
+
 # Default command to run app
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -4,5 +4,5 @@ presidio-anonymizer
 fastapi
 uvicorn
 pydantic
-transformers
-torch
+# transformers
+# torch
