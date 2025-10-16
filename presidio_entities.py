@@ -543,3 +543,14 @@ class PresidioRecognizerType(str, Enum):
                 return AzureHealthDeidRecognizer()
             case _:
                 raise ValueError(f"Recognizer '{recognizer_name}' not found---")
+
+def preload_presidio():
+    # Parse and get recognizers
+    recognizers = parse_recognizers(DEFAULT_RECOGNIZERS)
+    
+    # Create analyzer with specified recognizers
+    analyzer = get_analyzer(recognizers, DEFAULT_LANGUAGE)
+            
+    test_text = "My name is John Smith, my SSN is 123-45-6789 and email is john@example.com. My phone is +1 415-555-0199."
+    results = analyzer.analyze(text=test_text, language=DEFAULT_LANGUAGE)
+    logger.info(f"Preloaded Presidio recognizers. ")
