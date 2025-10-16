@@ -1,8 +1,5 @@
-from enum import Enum
 from typing import Optional
 from pydantic import BaseModel
-from openai.types.chat.completion_create_params import CompletionCreateParams
-from openai.types.chat.chat_completion import ChatCompletion
 
 
 class RequestContext(BaseModel):
