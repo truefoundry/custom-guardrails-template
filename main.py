@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException
 from guardrail.pii_redaction_presidio import process_input_guardrail
-from guardrail.nsfw_filtering_local_eval import nsfw_filtering
 from presidio_entities import preload_presidio
 
 
