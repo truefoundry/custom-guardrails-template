@@ -42,9 +42,12 @@ The Guardrail Server currently exposes two main endpoints for validation:
 ## How to build the docker image?
 
 ```bash
+ docker build -t custom-guardrails-template:latest .
+```
+If you are using `guardrails ai` guards in your guardrails, you will also need guardrails ai token which can be passed like below.
+```bash
  docker build --build-arg GUARDRAILS_TOKEN="<GUARDRAILS_AI_TOKEN>" -t custom-guardrails-template:latest .
 ```
-
 **Note**: The `requestBody` is accessible within the endpoint and can be used if needed for custom processing.
 
 ### InputGuardrailRequest
