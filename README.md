@@ -99,6 +99,9 @@ The server will start on `http://localhost:8000`
 ## Deploying the server to truefoundry
 To deploy this guardrail server to Truefoundry, please refer to the official documentation: [Getting Started with Deployment](https://docs.truefoundry.com/docs/deploy-first-service#getting-started-with-deployment).
 
+> [!WARNING]  
+> While deploying, make sure you are giving the minimum storage request as `10000` and the memory request as `4000`.
+
 You can fork this repository and deploy it directly from your GitHub account using the Truefoundry platform. The documentation provides detailed instructions on connecting your GitHub repo and configuring the deployment.
 
 For the latest and most accurate deployment steps, always consult the Truefoundry docs linked above.
