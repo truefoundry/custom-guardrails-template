@@ -2,19 +2,19 @@ import copy
 import logging
 from typing import Any
 
-from entities import InputGuardrailRequest
+from entities import InputGuardrailRequest, MutateGuardrailResponse
 from presidio_entities import DEFAULT_LANGUAGE, DEFAULT_RECOGNIZERS, parse_recognizers, get_analyzer, anonymizer
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
-def _response(verdict: bool, transformed: bool, result: dict[str, Any]) -> dict[str, Any]:
+def _response(verdict: bool, transformed: bool, result: dict[str, Any]) -> MutateGuardrailResponse:
     """AI Gateway mutate contract: 2xx JSON with verdict, transformed, and full requestBody in result."""
-    return {"verdict": verdict, "transformed": transformed, "result": result}
+    return MutateGuardrailResponse(verdict=verdict, transformed=transformed, result=result)
 
 
-def process_input_guardrail(request: InputGuardrailRequest) -> dict[str, Any]:
+def process_input_guardrail(request: InputGuardrailRequest) -> MutateGuardrailResponse:
     body = copy.deepcopy(request.requestBody)
 
     if not request.config.get("transform_input", False):
