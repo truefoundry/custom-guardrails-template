@@ -13,7 +13,7 @@ The application follows a modular architecture with separate modules for differe
   - **`nsfw_filtering_local_eval.py`**: NSFW content filtering using local Unitary toxic classification model
   - **`drug_mention_guardrails_ai.py`**: Drug mention detection using Guardrails AI
   - **`web_sanitization_guardrails_ai.py`**: Web content sanitization using Guardrails AI
-- **`entities.py`**: Pydantic models for request/response validation
+- **`entities.py`**: Pydantic models for gateway payloads and typed guardrail responses (`InputGuardrailRequest`, `OutputGuardrailRequest`, `ValidateGuardrailResponse`, `MutateGuardrailResponse`, etc.)
 
 ## Currently Exposed Endpoints
 
@@ -23,18 +23,20 @@ The Guardrail Server currently exposes two main endpoints for validation:
 - **POST `/pii-redaction`**
 - Validates and optionally transforms incoming OpenAI chat completion requests before they are processed. Uses Presidio to detect and redact Personally Identifiable Information (PII) from messages.
 
-#### What does guardrail server respond with?
-- `null` - Guardrails passed, no transformation needed for input.
-- `ChatCompletionCreateParams` - Content was transformed, returns the modified request with PII redacted.
-- `HTTP 400/500` - Guardrails failed with error details for input.
+#### What does the guardrail server respond with?
+
+Endpoints return **HTTP 2xx** with a **JSON body** that matches the [TrueFoundry AI Gateway custom guardrail contract](https://docs.truefoundry.com/gateway/custom-guardrails) (see also `ValidateGuardrailResponse` / `MutateGuardrailResponse` in `entities.py`):
+
+- **Mutate (`/pii-redaction`)** — `verdict`, `transformed`, and `result` (full OpenAI-shaped `requestBody` when `transformed` is `true`). Use **2xx** for both allow and deny; do not use **HTTP 400** for policy blocks.
+- **Non-2xx** — reserved for real failures (misconfiguration, dependency errors, crashes).
 
 ### NSFW Filtering Endpoint (Local Model)
 - **POST `/nsfw-filtering`**
 - Validates and optionally transforms outgoing OpenAI chat completion responses to filter out NSFW content. Uses the Unitary toxic classification model to detect toxic, sexually explicit, and obscene content.
 
-#### What does guardrail server respond with?
-- `null` - Guardrails passed, no transformation needed for output.
-- `HTTP 400/500` - Guardrails failed with error details for output.
+#### What does the guardrail server respond with?
+
+**HTTP 2xx** with **`verdict`** (and optional **`message`**) for allow/deny. Policy deny is expressed with **`verdict: false`** on **2xx**, not with **HTTP 400**. See `ValidateGuardrailResponse` in `entities.py` and the [custom guardrails](https://docs.truefoundry.com/gateway/custom-guardrails) doc.
 
 
 
@@ -64,6 +66,25 @@ If you are using `guardrails ai` guards in your guardrails, you will also need g
 - `responseBody`: (ChatCompletion) The model's output to be checked by the guardrail server.
 - `config`: (dict) Configuration options for the guardrail server.
 - `context`: (RequestContext) Contextual information such as user and metadata.
+
+### ValidateGuardrailResponse
+
+Used by **validate**-operation guardrails (input or output). FastAPI serializes this model to JSON for the gateway.
+
+**Attributes:**
+
+- `verdict`: (`bool`) `true` = allow, `false` = deny (preferred explicit signal on **2xx**).
+- `message`: (`Optional[str]`) Optional human-readable text for logs or UI; not used by the gateway for allow/deny decisions.
+
+### MutateGuardrailResponse
+
+Used by **mutate**-operation guardrails (e.g. PII redaction). FastAPI serializes this model to JSON for the gateway.
+
+**Attributes:**
+
+- `verdict`: (`bool`) Allow/deny when present; mutate handlers in this template typically return `true` when the call completed successfully.
+- `transformed`: (`bool`) `true` = replace request or response body with `result`; `false` = keep the original body.
+- `result`: (`dict[str, Any]`) Full OpenAI-shaped **`requestBody`** or **`responseBody`** to apply when `transformed` is `true`.
 
 ### RequestContext
 
@@ -538,7 +559,7 @@ The modular architecture makes it easy to customize the guardrail logic:
 
 - **PII Redaction**: Modify `guardrail/pii_redaction_presidio.py` to customize PII detection and redaction rules
 - **NSFW Filtering (Local)**: Modify `guardrail/nsfw_filtering_local_eval.py` to customize content filtering thresholds and rules
-- **Request/Response Models**: Modify `entities.py` to add new fields or validation rules
+- **Request / response models**: Modify `entities.py` to add fields or new Pydantic types; keep guardrail return types aligned with `ValidateGuardrailResponse` / `MutateGuardrailResponse` (or extend them) so the JSON matches the gateway contract.
 
 Replace the example guardrail logic in the respective files with your own implementation. The NSFW filtering uses the Unitary toxic classification model with configurable thresholds for toxicity, sexual content, and obscenity detection.
 
@@ -616,65 +637,45 @@ Create a new file in the `guardrail/` directory following this pattern:
 
 **For Input Validation** (e.g., `guardrail/your_validator_guardrails_ai.py`):
 ```python
-from typing import Optional
-from fastapi import HTTPException
 from guardrails import Guard
 from guardrails.hub import YourValidator  # Import your validator
 
-from entities import InputGuardrailRequest
+from entities import InputGuardrailRequest, ValidateGuardrailResponse
 
 # Setup the Guard with the validator
 guard = Guard().use(YourValidator, on_fail="exception")
 
-def your_validator_function(request: InputGuardrailRequest) -> Optional[dict]:
-    """
-    Validate input using Guardrails AI validator.
-    
-    Args:
-        request: Input guardrail request containing messages to validate
-        
-    Returns:
-        None if validation passes, raises HTTPException if validation fails
-    """
+def your_validator_function(request: InputGuardrailRequest) -> ValidateGuardrailResponse:
+    """Validate input using Guardrails AI; return 2xx JSON for both allow and deny."""
     try:
         messages = request.requestBody.get("messages", [])
         for message in messages:
             if isinstance(message, dict) and message.get("content"):
                 guard.validate(message["content"])
-        return None
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return ValidateGuardrailResponse(verdict=False, message=str(e))
+    return ValidateGuardrailResponse(verdict=True)
 ```
 
 **For Output Validation** (e.g., `guardrail/your_output_validator_guardrails_ai.py`):
 ```python
-from typing import Optional
-from fastapi import HTTPException
 from guardrails import Guard
 from guardrails.hub import YourOutputValidator  # Import your validator
 
-from entities import OutputGuardrailRequest
+from entities import OutputGuardrailRequest, ValidateGuardrailResponse
 
 # Setup the Guard with the validator
 guard = Guard().use(YourOutputValidator, on_fail="exception")
 
-def your_output_validator_function(request: OutputGuardrailRequest) -> Optional[dict]:
-    """
-    Validate output using Guardrails AI validator.
-    
-    Args:
-        request: Output guardrail request containing response to validate
-        
-    Returns:
-        None if validation passes, raises HTTPException if validation fails
-    """
+def your_output_validator_function(request: OutputGuardrailRequest) -> ValidateGuardrailResponse:
+    """Validate output using Guardrails AI; return 2xx JSON for both allow and deny."""
     try:
         for choice in request.responseBody.get("choices", []):
             if "content" in choice.get("message", {}):
                 guard.validate(choice["message"]["content"])
-        return None
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return ValidateGuardrailResponse(verdict=False, message=str(e))
+    return ValidateGuardrailResponse(verdict=True)
 ```
 
 #### Step 3: Add the Route
@@ -691,10 +692,10 @@ app.add_api_route("/your-endpoint", endpoint=your_validator_function, methods=["
 
 ### Best Practices
 
-1. **Error Handling**: Always wrap validator calls in try-catch blocks
-2. **HTTP Status Codes**: Use appropriate status codes (400 for validation failures, 500 for server errors)
-3. **Logging**: Consider adding logging for debugging and monitoring
-4. **Testing**: Test your validators with various inputs including edge cases
+1. **Error handling**: Wrap validator calls in try/except; return `ValidateGuardrailResponse(verdict=False, message=...)` on policy failure instead of raising **HTTP 400** for content denial (so `enforce_but_ignore_on_error` and similar strategies behave correctly).
+2. **HTTP status**: Use **2xx** for completed guardrail runs (allow or deny via `verdict`). Reserve **4xx/5xx** for genuine server or dependency failures.
+3. **Logging**: Add logging for debugging and monitoring where helpful.
+4. **Testing**: Test validators with varied inputs and edge cases.
 
 ## Adding New Endpoints
 
