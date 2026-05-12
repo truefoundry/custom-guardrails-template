@@ -1,69 +1,61 @@
+import copy
 import logging
-from typing import Optional
+from typing import Any
 
-from entities import InputGuardrailRequest
+from entities import InputGuardrailRequest, MutateGuardrailResponse
 from presidio_entities import DEFAULT_LANGUAGE, DEFAULT_RECOGNIZERS, parse_recognizers, get_analyzer, anonymizer
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
+def _response(verdict: bool, transformed: bool, result: dict[str, Any]) -> MutateGuardrailResponse:
+    """AI Gateway mutate contract: 2xx JSON with verdict, transformed, and full requestBody in result."""
+    return MutateGuardrailResponse(verdict=verdict, transformed=transformed, result=result)
 
-def process_input_guardrail(request: InputGuardrailRequest) -> Optional[dict]:    # Check if transformation is enabled
+
+def process_input_guardrail(request: InputGuardrailRequest) -> MutateGuardrailResponse:
+    body = copy.deepcopy(request.requestBody)
+
     if not request.config.get("transform_input", False):
         logger.debug("Transform input disabled, skipping PII redaction")
-        return None
-    
-    # Get recognizer configuration
-    recognizer_config = request.config.get("recognizers",DEFAULT_RECOGNIZERS)
-    
-    # Get language configuration
+        return _response(True, False, body)
+
+    recognizer_config = request.config.get("recognizers", DEFAULT_RECOGNIZERS)
     language = request.config.get("language", DEFAULT_LANGUAGE)
-        
+
     try:
-        # Parse and get recognizers
         recognizers = parse_recognizers(recognizer_config)
-        
-        # Create analyzer with specified recognizers
         analyzer = get_analyzer(recognizers, language)
-        
-        # Process messages
-        messages = request.requestBody.get('messages', [])
+
+        messages = body.get("messages", [])
         transformed = False
-        transformed_messages = []
-        
+        transformed_messages: list[dict[str, Any]] = []
+
         for message in messages:
             if isinstance(message, dict) and message.get("content"):
-                # Analyze for PII
                 results = analyzer.analyze(text=message["content"], language=language)
-                
-                # Anonymize detected PII
                 anonymized_content = anonymizer.anonymize(
-                    text=message["content"], 
-                    analyzer_results=results
+                    text=message["content"],
+                    analyzer_results=results,
                 )
-                
-                # Track if any transformation occurred
                 if anonymized_content.text != message["content"]:
                     transformed = True
                     logger.info(
                         f"PII detected and redacted. "
                         f"Entities found: {[r.entity_type for r in results]}"
                     )
-                
-                transformed_messages.append({
-                    "role": message["role"],
-                    "content": anonymized_content.text
-                })
-        
-        # Return transformed body only if PII was actually redacted
+                transformed_messages.append(
+                    {"role": message["role"], "content": anonymized_content.text}
+                )
+
         if transformed:
-            request.requestBody['messages'] = transformed_messages
-            return request.requestBody
+            body["messages"] = transformed_messages
         else:
-            logger.debug("No PII detected, returning None")
-            return None
-            
+            logger.debug("No PII detected")
+
+        return _response(True, transformed, body)
+
     except Exception as e:
         logger.error(f"Error during PII redaction: {str(e)}", exc_info=True)
         raise
