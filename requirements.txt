@@ -1,11 +1,4 @@
-openai==1.94.0
-presidio-analyzer
-presidio-anonymizer
 fastapi
 uvicorn
 pydantic
-guardrails-ai
-guardrails-ai[api]
-torch
-transformers
 requests
