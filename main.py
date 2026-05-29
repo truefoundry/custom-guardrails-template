@@ -47,13 +47,27 @@ async def health_check():
     }
 
 
-# Validate (block only on findings with action BLOCK)
-app.add_api_route("/lasso-classify", endpoint=lasso_classify_input, methods=["POST"])
-app.add_api_route("/lasso-classify-output", endpoint=lasso_classify_output, methods=["POST"])
+# Validate — HTTP 200 + verdict true/false (TrueFoundry policy contract)
+app.add_api_route(
+    "/lasso-classify", endpoint=lasso_classify_input, methods=["POST"], status_code=200
+)
+app.add_api_route(
+    "/lasso-classify-output",
+    endpoint=lasso_classify_output,
+    methods=["POST"],
+    status_code=200,
+)
 
-# Mutate (PII masking via classifix; BLOCK findings still deny)
-app.add_api_route("/lasso-classifix", endpoint=lasso_classifix_input, methods=["POST"])
-app.add_api_route("/lasso-classifix-output", endpoint=lasso_classifix_output, methods=["POST"])
+# Mutate (PII masking via classifix; span masks from findings; safety BLOCK still denies)
+app.add_api_route(
+    "/lasso-classifix", endpoint=lasso_classifix_input, methods=["POST"], status_code=200
+)
+app.add_api_route(
+    "/lasso-classifix-output",
+    endpoint=lasso_classifix_output,
+    methods=["POST"],
+    status_code=200,
+)
 
 
 @app.exception_handler(HTTPException)

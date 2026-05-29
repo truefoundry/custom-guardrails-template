@@ -226,6 +226,116 @@ def _block_details(findings: dict[str, Any]) -> tuple[bool, str]:
     return False, ""
 
 
+def _finding_has_mask_span(finding: dict[str, Any]) -> bool:
+    return (
+        finding.get("start") is not None
+        and finding.get("end") is not None
+        and bool(finding.get("mask"))
+    )
+
+
+def _blocking_without_mask_spans(findings: dict[str, Any]) -> tuple[bool, str]:
+    """BLOCK findings that classifix cannot redact via start/end/mask metadata."""
+    details: list[str] = []
+    for deputy, deputy_findings in findings.items():
+        if not isinstance(deputy_findings, list):
+            continue
+        for finding in deputy_findings:
+            if not isinstance(finding, dict):
+                continue
+            if finding.get("action") != "BLOCK":
+                continue
+            if _finding_has_mask_span(finding):
+                continue
+            name = finding.get("name", "violation")
+            severity = finding.get("severity", "")
+            suffix = f" ({severity})" if severity else ""
+            details.append(f"{deputy}/{name}{suffix}")
+    if details:
+        return True, "; ".join(details)
+    return False, ""
+
+
+def _extract_mask_spans(findings: dict[str, Any]) -> list[tuple[int, int, int, str]]:
+    spans: list[tuple[int, int, int, str]] = []
+    for deputy_findings in findings.values():
+        if not isinstance(deputy_findings, list):
+            continue
+        for finding in deputy_findings:
+            if not isinstance(finding, dict) or not _finding_has_mask_span(finding):
+                continue
+            spans.append(
+                (
+                    int(finding.get("message_index", 0)),
+                    int(finding["start"]),
+                    int(finding["end"]),
+                    str(finding["mask"]),
+                )
+            )
+    return spans
+
+
+def _apply_mask_spans_to_text(content: str, spans: list[tuple[int, int, str]]) -> str:
+    updated = content
+    for start, end, mask in sorted(spans, key=lambda item: item[0], reverse=True):
+        if 0 <= start < end <= len(updated):
+            updated = updated[:start] + mask + updated[end:]
+    return updated
+
+
+def _apply_finding_masks(
+    body: dict[str, Any],
+    findings: dict[str, Any],
+    *,
+    is_output: bool,
+) -> tuple[dict[str, Any], bool]:
+    spans = _extract_mask_spans(findings)
+    if not spans:
+        return body, False
+
+    updated = copy.deepcopy(body)
+    by_message: dict[int, list[tuple[int, int, str]]] = {}
+    for message_index, start, end, mask in spans:
+        by_message.setdefault(message_index, []).append((start, end, mask))
+
+    transformed = False
+    if is_output:
+        choices = updated.get("choices", [])
+        for message_index, message_spans in by_message.items():
+            if message_index >= len(choices):
+                continue
+            choice = choices[message_index]
+            if not isinstance(choice, dict):
+                continue
+            message = choice.get("message")
+            if not isinstance(message, dict) or message.get("content") is None:
+                continue
+            original = str(message["content"])
+            masked = _apply_mask_spans_to_text(original, message_spans)
+            if masked != original:
+                message["content"] = masked
+                transformed = True
+        return updated, transformed
+
+    messages = updated.get("messages", [])
+    if not isinstance(messages, list):
+        return updated, False
+
+    for message_index, message_spans in by_message.items():
+        if message_index >= len(messages):
+            continue
+        message = messages[message_index]
+        if not isinstance(message, dict) or message.get("content") is None:
+            continue
+        original = str(message["content"])
+        masked = _apply_mask_spans_to_text(original, message_spans)
+        if masked != original:
+            message["content"] = masked
+            transformed = True
+
+    return updated, transformed
+
+
 def _call_lasso(
     *,
     endpoint: str,
@@ -252,7 +362,7 @@ def _call_lasso(
         logger.error("Lasso API request failed: %s", exc)
         raise LassoApiError(f"Failed to connect to Lasso API: {exc}") from exc
 
-    if response.status_code != 200:
+    if not response.ok:
         logger.error("Lasso API error %s: %s", response.status_code, response.text)
         raise _lasso_http_error(response)
 
@@ -328,7 +438,20 @@ def _apply_masked_messages(
         return updated, False
 
     original = updated.get("messages", [])
-    if masked_messages and masked_messages != original:
+    if not isinstance(original, list) or not masked_messages:
+        return updated, False
+
+    if len(masked_messages) != len(original):
+        updated["messages"] = masked_messages
+        return updated, True
+
+    content_changed = any(
+        isinstance(orig, dict)
+        and isinstance(masked, dict)
+        and str(orig.get("content", "")) != str(masked.get("content", ""))
+        for orig, masked in zip(original, masked_messages)
+    )
+    if content_changed:
         updated["messages"] = masked_messages
         return updated, True
     return updated, False
@@ -340,18 +463,30 @@ def _mutate_response(
     *,
     is_output: bool,
 ) -> MutateGuardrailResponse:
-    blocked, _ = _block_details(lasso_response.get("findings", {}))
-    if blocked:
-        return MutateGuardrailResponse(verdict=False, transformed=False, result=body)
+    findings = lasso_response.get("findings", {}) or {}
+
+    result = copy.deepcopy(body)
+    transformed = False
 
     masked_messages = lasso_response.get("messages")
-    if not masked_messages:
-        return MutateGuardrailResponse(verdict=True, transformed=False, result=body)
+    if masked_messages:
+        result, transformed = _apply_masked_messages(
+            result, masked_messages, is_output=is_output
+        )
 
-    result, transformed = _apply_masked_messages(body, masked_messages, is_output=is_output)
-    if lasso_response.get("violations_detected") and not transformed:
+    if not transformed:
+        result, transformed = _apply_finding_masks(result, findings, is_output=is_output)
+
+    block_without_mask, detail = _blocking_without_mask_spans(findings)
+    if block_without_mask:
+        return MutateGuardrailResponse(verdict=False, transformed=False, result=body)
+
+    if transformed:
+        return MutateGuardrailResponse(verdict=True, transformed=True, result=result)
+
+    if lasso_response.get("violations_detected"):
         logger.info("Lasso violations detected on classifix without message transformation")
-    return MutateGuardrailResponse(verdict=True, transformed=transformed, result=result)
+    return MutateGuardrailResponse(verdict=True, transformed=False, result=result)
 
 
 def _handle_lasso_error(exc: Exception) -> None:
